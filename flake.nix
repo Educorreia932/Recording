@@ -19,6 +19,7 @@
           ghc
           haskell-language-server
           cabal-install
+          haskellPackages.cabal-fmt
         ];
       };
     });

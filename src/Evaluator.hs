@@ -1,18 +1,22 @@
-module Evaluator where
+module Evaluator (evaluate) where
 
 import Common (Expression (..), VariableIdentifier)
 
 substitute :: VariableIdentifier -> Expression -> Expression -> Expression
-substitute _ (Literal a) _ = Literal a
-substitute x (Variable y) e
-    | x == y = e
-    | otherwise = Variable y
-substitute x (Abstraction y e1) e2
-    | x == y = Abstraction y e1
-    | otherwise = Abstraction y (substitute x e1 e2)
-substitute x (Application e1 e2) e3 = Application (substitute x e1 e3) (substitute x e2 e3)
+substitute v e = sub
+  where
+    sub (Literal l) = Literal l
+    sub (Variable v')
+        | v == v' = e
+        | otherwise = Variable v'
+    sub (Abstraction v' e1)
+        | v == v' = Abstraction v' e1
+        | otherwise = Abstraction v' $ sub e1
+    sub (Application e1 e2) = Application (sub e1) (sub e2)
 
 evaluate :: Expression -> Expression
-evaluate (Application (Abstraction x e) v2) = substitute x e v2
-evaluate (Application e1 e2) = Application (evaluate e1) e2
+evaluate (Application fun arg) = case evaluate fun of
+    -- Substitute the argument for the variable in the body of the abstraction
+    Abstraction var body -> evaluate $ substitute var arg body
+    other -> Application other arg
 evaluate e = e

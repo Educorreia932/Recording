@@ -17,6 +17,7 @@ executable FEUP-DISS-exe
   other-modules:
     Common
     Evaluator
+    Lexer
 
   build-depends:    base ^>=4.17.2.0
   hs-source-dirs:   src
@@ -26,6 +27,7 @@ library FEUP-DISS-lib
   exposed-modules:
     Common
     Evaluator
+    Lexer
 
   build-depends:    base ^>=4.17.2.0
   hs-source-dirs:   src
@@ -33,7 +35,7 @@ library FEUP-DISS-lib
 
 test-suite tests
   type:             exitcode-stdio-1.0
-  main-is:          EvaluatorTest.hs
+  main-is:          Main.hs
   build-depends:
     , base   ^>=4.17.2.0
     , HUnit  ^>=1.6

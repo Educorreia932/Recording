@@ -1,13 +1,18 @@
 module Main where
 
-import Common (Expression (..))
 import Evaluator (evaluate)
+import Control.Monad (forever)
+import Parser (parse)
+import Lexer (tokenize)
+import System.IO ( hFlush, stdout )
 
 main :: IO ()
-main = do
-    -- Identity function applied to literal value 1
-    let e1 = Application (Abstraction "x" (Variable "x")) (Literal 1)
-    let e2 = Application (Literal 1) (Abstraction "x" (Variable "x"))
-    let expression = e1
-    let evaluatedExpression = evaluate expression
-    putStrLn $ show expression ++ " → " ++ show evaluatedExpression
+main = forever $ do
+    putStr "λ> "
+    hFlush stdout
+    input <- getLine
+    let expression = parse $ tokenize input
+        evaluation = case expression of
+            Left parseError -> show parseError
+            Right value -> show $ evaluate value
+    putStrLn evaluation

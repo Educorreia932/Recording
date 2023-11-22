@@ -1,6 +1,7 @@
 module Evaluator (evaluate) where
 
 import Common (Expression (..), VariableIdentifier)
+import Parser (parseExpression)
 
 substitute :: VariableIdentifier -> Expression -> Expression -> Expression
 substitute v e = sub

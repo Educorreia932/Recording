@@ -1,52 +1,58 @@
 module EvaluatorTest where
 
 import System.Exit qualified as Exit
-import Test.HUnit
+import Test.HUnit ( Test(TestList, TestCase), assertEqual )
 
 import Common (Expression (..))
 import Evaluator (evaluate)
+import Parser (parseExpression)
+
+eval :: String -> Expression
+eval string = case parseExpression string of
+    Left parseError -> error "Error on parsing"
+    Right expression -> evaluate expression
 
 testEvaluate :: Test
 testEvaluate =
-  TestList
-    [ TestCase
-        $ assertEqual
-          "Evaluate Application"
-          (Literal 42)
-          (evaluate (Application (Abstraction "x" (Variable "x")) (Literal 42)))
-    , TestCase
-        $ assertEqual
-          "Evaluate Nested Application"
-          (Literal 42)
-          (evaluate (Application (Application (Abstraction "x" (Abstraction "y" (Variable "x"))) (Literal 42)) (Literal 1)))
-    , TestCase
-        $ assertEqual
-          "Evaluate Application with Abstraction Argument"
-          (Abstraction "y" (Literal 42))
-          (evaluate (Application (Abstraction "x" (Variable "x")) (Abstraction "y" (Literal 42))))
-    , TestCase
-        $ assertEqual
-          "Evaluate Application with Variable Argument"
-          (Variable "y")
-          (evaluate (Application (Abstraction "x" (Variable "x")) (Variable "y")))
-    , TestCase
-        $ assertEqual
-          "Evaluate Application with Nested Abstraction Argument"
-          (Abstraction "y" (Literal 42))
-          (evaluate (Application (Abstraction "x" (Abstraction "y" (Variable "x"))) (Literal 42)))
-    , TestCase
-        $ assertEqual
-          "Evaluate Application with Nested Abstraction Function"
-          (Abstraction "z" (Literal 1))
-          (evaluate (Application (Application (Abstraction "x" (Abstraction "y" (Variable "x"))) (Abstraction "z" (Literal 1))) (Literal 42)))
-    , TestCase
-        $ assertEqual
-          "Evaluate Application with Nested Abstraction Function"
-          (Application (Variable "y") (Abstraction "x" (Variable "x")))
-          (evaluate (Application (Abstraction "x" (Application (Variable "y") (Abstraction "x" (Variable "x")))) (Literal 42)))
-    ]
+    TestList
+        [ TestCase
+            $ assertEqual
+                "Application"
+                (Literal 42)
+                (eval "(λx.x) 42")
+        , TestCase
+            $ assertEqual
+                "Nested Application"
+                (Literal 42)
+                (eval "((λx.x) λy.y) 42")
+        , TestCase
+            $ assertEqual
+                "Application with Abstraction Argument"
+                (Abstraction "y" (Literal 42))
+                (eval "(λx.x) λy.42")
+        , TestCase
+            $ assertEqual
+                "Application with Variable Argument"
+                (Variable "y")
+                (eval "(λx.x) y")
+        , TestCase
+            $ assertEqual
+                "Application with Nested Abstraction Argument"
+                 (Abstraction "y" (Literal 42))
+                (eval "(λx.x) λy.42")
+        , TestCase
+            $ assertEqual
+                "Currying"
+                (Literal 1)
+                (eval "(λx.(λy.x)) (1 2)")
+        , TestCase
+            $ assertEqual
+                "Application with Nested Abstraction Function"
+                (Variable "y")
+                (eval "(λx. (λx.x) y) 42")
+        ]
 
 tests :: Test
 tests =
-  TestList
-    [testEvaluate]
+    TestList
+        [testEvaluate]

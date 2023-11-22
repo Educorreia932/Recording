@@ -1,17 +1,63 @@
-module Parser where
+module Parser (parseExpression) where
 
-import Common (Expression (..), Token (..))
+import Common (Expression (..))
 
-newtype ParseError = ParseError String deriving (Eq, Show)
+import Data.Functor ((<&>))
+import Text.Parsec (ParseError, parse, (<|>))
+import Text.Parsec.Combinator (eof, many1)
+import Text.Parsec.Language (emptyDef)
+import Text.Parsec.String (Parser)
+import Text.Parsec.Token (TokenParser, makeTokenParser, reservedNames, reservedOpNames)
+import Text.Parsec.Token qualified as Token
 
-parse :: [Token] -> Either ParseError Expression
-parse [] = Left (ParseError "Empty input")
-parse (x : xs) = case x of
-    Number n -> Right (Literal n)
-    Word v -> Right (Variable v)
-    Lambda -> case xs of
-        (Word v : Dot : rest) -> case parse rest of
-            Right expression -> Right (Abstraction v expression)
-            Left parseError -> Left parseError
-        _ -> Left (ParseError "Invalid abstraction")
-    _ -> Left (ParseError "Invalid token")
+lexer :: TokenParser ()
+lexer =
+    makeTokenParser
+        emptyDef
+            { reservedOpNames = ["λ", "\\"]
+            , reservedNames = []
+            }
+
+identifier :: Parser String
+identifier = Token.identifier lexer
+
+parentheses :: Parser a -> Parser a
+parentheses = Token.parens lexer
+
+natural :: Parser Integer
+natural = Token.natural lexer
+
+number :: Parser Expression
+number = natural <&> (Literal . fromIntegral) -- TODO: Support negative numbers
+
+variable :: Parser Expression
+variable = identifier <&> Variable
+
+lambda :: Parser Expression
+lambda = do
+    _ <- Token.reservedOp lexer "λ" <|> Token.reservedOp lexer "\\"
+    v <- identifier
+    _ <- Token.reservedOp lexer "."
+    Abstraction v <$> expression
+
+term :: Parser Expression
+term =
+    parentheses expression
+        <|> lambda
+        <|> variable
+        <|> number
+
+expression :: Parser Expression
+expression = do
+    terms <- many1 term
+    return (foldl1 Application terms)
+
+contents :: Parser a -> Parser a
+contents p = do
+    Token.whiteSpace lexer
+    r <- p
+    eof
+    return r
+
+parseExpression :: String -> Either ParseError Expression
+parseExpression = parse (contents expression) "<stdin>"

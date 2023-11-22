@@ -16,11 +16,13 @@ executable FEUP-DISS-exe
   main-is:          Main.hs
   other-modules:
     Common
-    Evaluator
-    Lexer
     Parser
+    Evaluator
 
-  build-depends:    base ^>=4.17.2.0
+  build-depends:
+    , base    ^>=4.17.2.0
+    , parsec
+
   hs-source-dirs:   src
   default-language: GHC2021
 
@@ -28,24 +30,26 @@ library FEUP-DISS-lib
   exposed-modules:
     Common
     Evaluator
-    Lexer
     Parser
 
-  build-depends:    base ^>=4.17.2.0
+  build-depends:
+    , base    ^>=4.17.2.0
+    , parsec
+
   hs-source-dirs:   src
   default-language: GHC2021
 
 test-suite tests
-  type:             exitcode-stdio-1.0
-  main-is:          Main.hs
+  type:              exitcode-stdio-1.0
+  main-is:           Main.hs
   other-modules:
     EvaluatorTest
-    LexerTest
     ParserTest
-  build-depends:
-    , base   ^>=4.17.2.0
-    , HUnit  ^>=1.6
-    , FEUP-DISS-lib
 
-  hs-source-dirs:   tests
-  default-language: GHC2021
+  build-depends:
+    , base           ^>=4.17.2.0
+    , FEUP-DISS-lib
+    , HUnit          ^>=1.6
+
+  hs-source-dirs:    tests
+  default-language:  GHC2021

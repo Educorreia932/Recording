@@ -5,22 +5,37 @@ import Test.HUnit
 
 import Common (Expression (..))
 import Evaluator (evaluate)
-import Lexer (tokenize)
-import Parser ( parse )
+import Parser (parseExpression)
 
 testParser :: Test
 testParser =
   TestList
     [ TestCase
         $ assertEqual
-          "Parse Literal"
+          "Literal"
           (Right (Literal 42))
-          (parse $ tokenize "42"),
-      TestCase
+          (parseExpression "42")
+    , TestCase
         $ assertEqual
-          "Parse Abstraction"
+          "Abstraction"
           (Right (Abstraction "x" (Variable "x")))
-          (parse $ tokenize "λx.x")
+          (parseExpression "λx.x")
+    , TestCase
+        $ assertEqual
+          "Application with literal"
+          (Right (Application (Abstraction "x" (Variable "x")) (Literal 42)))
+          (parseExpression "(λx.x) 42")
+    , TestCase
+        $ assertEqual
+          "Application with variable"
+          (Right (Application (Abstraction "x" (Variable "x")) (Variable "y")))
+          (parseExpression "(λx.x) y")
+    , TestCase
+        $ assertEqual
+          "Grouping"
+          (Right (Application (Abstraction "x" (Variable "x")) (Application (Abstraction "y" (Variable "y")) (Literal 42))))
+          (parseExpression "(λx.x) ((λy.y) 42)")
+          -- TODO: Currying
     ]
 
 tests :: Test

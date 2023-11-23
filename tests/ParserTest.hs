@@ -17,6 +17,11 @@ testParser =
           (parseExpression "42")
     , TestCase
         $ assertEqual
+          "Negative literal"
+          (Right (Literal (-42)))
+          (parseExpression "-42")
+    , TestCase
+        $ assertEqual
           "Abstraction"
           (Right (Abstraction "x" (Variable "x")))
           (parseExpression "λx.x")

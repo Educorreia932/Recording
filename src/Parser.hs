@@ -24,11 +24,11 @@ identifier = Token.identifier lexer
 parentheses :: Parser a -> Parser a
 parentheses = Token.parens lexer
 
-natural :: Parser Integer
-natural = Token.natural lexer
+integer :: Parser Integer
+integer = Token.integer lexer
 
 number :: Parser Expression
-number = natural <&> (Literal . fromIntegral) -- TODO: Support negative numbers
+number = integer <&> (Literal . fromIntegral)
 
 variable :: Parser Expression
 variable = identifier <&> Variable

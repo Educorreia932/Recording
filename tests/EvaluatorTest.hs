@@ -1,7 +1,7 @@
 module EvaluatorTest where
 
 import System.Exit qualified as Exit
-import Test.HUnit ( Test(TestList, TestCase), assertEqual )
+import Test.HUnit (Test (TestCase, TestList), assertEqual)
 
 import Common (Expression (..))
 import Evaluator (evaluate)
@@ -17,37 +17,42 @@ testEvaluate =
     TestList
         [ TestCase
             $ assertEqual
+                "Abstraction"
+                (Abstraction "x" (Variable "x"))
+                (eval "λx.x")
+        , TestCase
+            $ assertEqual
                 "Application"
                 (Literal 42)
                 (eval "(λx.x) 42")
         , TestCase
             $ assertEqual
-                "Nested Application"
+                "Nested application"
                 (Literal 42)
                 (eval "((λx.x) λy.y) 42")
         , TestCase
             $ assertEqual
-                "Application with Abstraction Argument"
+                "Application with abstraction argument"
                 (Abstraction "y" (Literal 42))
                 (eval "(λx.x) λy.42")
         , TestCase
             $ assertEqual
-                "Application with Variable Argument"
+                "Application with variable argument"
                 (Variable "y")
                 (eval "(λx.x) y")
         , TestCase
             $ assertEqual
-                "Application with Nested Abstraction Argument"
-                 (Abstraction "y" (Literal 42))
+                "Application with nested abstraction argument"
+                (Abstraction "y" (Literal 42))
                 (eval "(λx.x) λy.42")
         , TestCase
             $ assertEqual
                 "Currying"
                 (Literal 1)
-                (eval "(λx.(λy.x)) (1 2)")
+                (eval "(λx.λy.x) 1 2")
         , TestCase
             $ assertEqual
-                "Application with Nested Abstraction Function"
+                "Application with free variable"
                 (Variable "y")
                 (eval "(λx. (λx.x) y) 42")
         ]

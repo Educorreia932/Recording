@@ -40,7 +40,11 @@ testParser =
           "Grouping"
           (Right (Application (Abstraction "x" (Variable "x")) (Application (Abstraction "y" (Variable "y")) (Literal 42))))
           (parseExpression "(λx.x) ((λy.y) 42)")
-          -- TODO: Currying
+    , TestCase
+        $ assertEqual
+          "Currying"
+          (Right (Application (Application (Abstraction "x" (Abstraction "y" (Variable "x"))) (Literal 1)) (Literal 2)))
+          (parseExpression "(λx.λy.x) 1 2")
     ]
 
 tests :: Test

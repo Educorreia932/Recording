@@ -53,9 +53,9 @@ expression = do
     return (foldl1 Application terms)
 
 contents :: Parser a -> Parser a
-contents p = do
+contents parser = do
     Token.whiteSpace lexer
-    r <- p
+    r <- parser
     eof
     return r
 

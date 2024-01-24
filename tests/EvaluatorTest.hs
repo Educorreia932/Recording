@@ -55,6 +55,11 @@ testEvaluate =
                 "Application with free variable"
                 (Variable "y")
                 (eval "(λx. (λx.x) y) 42")
+        , TestCase
+            $ assertEqual
+                "α-conversion"
+                (Abstraction "z" (Variable "y"))
+                (eval "(λx.λy.x) (λz.y) 42")
         ]
 
 tests :: Test

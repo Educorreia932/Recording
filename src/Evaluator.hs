@@ -1,18 +1,31 @@
 module Evaluator (evaluate) where
 
 import Common (Expression (..), VariableIdentifier)
-import Parser (parseExpression)
+
+freeVariables :: Expression -> [VariableIdentifier]
+freeVariables (Literal _) = []
+freeVariables (Variable v) = [v]
+freeVariables (Abstraction v e) = filter (/= v) $ freeVariables e
+freeVariables (Application e1 e2) = freeVariables e1 ++ freeVariables e2
+
+disambiguate :: VariableIdentifier -> VariableIdentifier
+disambiguate x = x ++ "'"
 
 substitute :: VariableIdentifier -> Expression -> Expression -> Expression
-substitute v e = sub
+substitute var e = sub
   where
     sub (Literal l) = Literal l
-    sub (Variable v')
-        | v == v' = e
-        | otherwise = Variable v'
-    sub (Abstraction v' e1)
-        | v == v' = Abstraction v' e1
-        | otherwise = Abstraction v' $ sub e1
+    sub (Variable v)
+        | var == v = e
+        | otherwise = Variable v
+    sub (Abstraction v body)
+        | var == v = Abstraction v body
+        -- α-conversion
+        | v `elem` freeVariables e =
+            let v' = disambiguate v
+                body' = substitute v (Variable v') body
+             in Abstraction v' $ sub body'
+        | otherwise = Abstraction v $ sub body
     sub (Application e1 e2) = Application (sub e1) (sub e2)
 
 evaluate :: Expression -> Expression

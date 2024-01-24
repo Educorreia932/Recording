@@ -4,6 +4,7 @@ import Common (Expression (..))
 
 import Data.Functor ((<&>))
 import Text.Parsec (ParseError, parse, (<|>))
+import Text.Parsec.Char (letter)
 import Text.Parsec.Combinator (eof, many1)
 import Text.Parsec.Language (emptyDef)
 import Text.Parsec.String (Parser)
@@ -19,7 +20,7 @@ lexer =
             }
 
 identifier :: Parser String
-identifier = Token.identifier lexer
+identifier = many1 letter
 
 parentheses :: Parser a -> Parser a
 parentheses = Token.parens lexer

@@ -42,9 +42,14 @@ testParser =
           (parseExpression "(λx.x) ((λy.y) 42)")
     , TestCase
         $ assertEqual
-          "Currying"
+          "Function with multiple arguments"
           (Right (Application (Application (Abstraction "x" (Abstraction "y" (Variable "x"))) (Literal 1)) (Literal 2)))
           (parseExpression "(λx.λy.x) 1 2")
+    , TestCase
+        $ assertEqual
+          "Currying"
+          (Right (Application (Application (Abstraction "x" (Abstraction "y" (Variable "x"))) (Literal 1)) (Literal 2)))
+          (parseExpression "(λx y.x) 1 2")
     ]
 
 tests :: Test

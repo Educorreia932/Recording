@@ -1,4 +1,4 @@
-module Terms where
+module Implementation.Terms where
 
 import Data.List (intercalate)
 import Data.Map.Ordered qualified as Map

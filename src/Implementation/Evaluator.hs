@@ -1,7 +1,7 @@
-module Evaluator (evaluate) where
+module Implementation.Evaluator (evaluate) where
 
 import Data.Map.Ordered qualified as Map
-import Terms (Expression (..), VariableIdentifier)
+import Implementation.Terms (Expression (..), VariableIdentifier)
 
 freeVariables :: Expression -> [VariableIdentifier]
 freeVariables (Literal _) = []

@@ -1,6 +1,6 @@
 module Parser (parseExpression) where
 
-import Common (Expression (..))
+import Terms (Expression (..))
 
 import Data.Functor ((<&>))
 import Text.Parsec (ParseError, parse, (<|>))

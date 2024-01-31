@@ -15,20 +15,22 @@ executable FEUP-DISS-exe
   import:           warnings
   main-is:          Main.hs
   other-modules:
-    Common
+    Terms
     Parser
     Evaluator
 
   build-depends:
     , base    ^>=4.17.2.0
     , parsec
+    , containers
+    , ordered-containers
 
   hs-source-dirs:   src
   default-language: GHC2021
 
 library FEUP-DISS-lib
   exposed-modules:
-    Common
+    Terms
     Evaluator
     Parser
 

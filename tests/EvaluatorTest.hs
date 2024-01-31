@@ -3,7 +3,7 @@ module EvaluatorTest where
 import System.Exit qualified as Exit
 import Test.HUnit (Test (TestCase, TestList), assertEqual)
 
-import Common (Expression (..))
+import Terms (Expression (..))
 import Evaluator (evaluate)
 import Parser (parseExpression)
 

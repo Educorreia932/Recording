@@ -3,7 +3,7 @@ module ParserTest where
 import System.Exit qualified as Exit
 import Test.HUnit
 
-import Common (Expression (..))
+import Terms (Expression (..))
 import Evaluator (evaluate)
 import Parser (parseExpression)
 

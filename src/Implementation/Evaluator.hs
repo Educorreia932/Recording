@@ -37,11 +37,11 @@ evaluate (Modify (Record r) i e) =
             Just x -> x
             Nothing -> error "Index out of bounds"
      in Record $ Map.alter (\_ -> Just e) k r
-evaluate (IndexExpression e i) = case e of
-    Record m -> case Map.elemAt m i of
-        Just (_, e') -> e'
-        Nothing -> error "Index out of bounds"
-    _ -> error "Indexing non-record"
+-- evaluate (IndexExpression e i) = case e of
+--     Record m -> case Map.elemAt m i of
+--         Just (_, e') -> e'
+--         Nothing -> error "Index out of bounds"
+--     _ -> error "Indexing non-record"
 evaluate (Application fun arg) = case evaluate fun of
     Abstraction var body -> evaluate $ substitute var arg body
     other -> Application other arg

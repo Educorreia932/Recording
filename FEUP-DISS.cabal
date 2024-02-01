@@ -15,8 +15,11 @@ executable FEUP-DISS-exe
   import:           warnings
   main-is:          Main.hs
   other-modules:
+    Implementation.Compilation
     Implementation.Evaluator
     Implementation.Terms
+    Explicit.Terms
+    Explicit.Types
 
   build-depends:
     , base    ^>=4.17.2.0

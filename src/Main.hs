@@ -1,10 +1,12 @@
 module Main where
 
 import Control.Monad (forever)
-import Data.Map.Ordered qualified as Map
+import Data.Map qualified as Map
+import Explicit.Terms
+import Explicit.Types
+import Implementation.Compilation
 import Implementation.Evaluator (evaluate)
 import System.IO (hFlush, stdout)
-import Implementation.Terms
 
 -- repl :: IO ()
 -- repl = forever $ do
@@ -18,6 +20,20 @@ import Implementation.Terms
 
 main :: IO ()
 main = do
-    print $ evaluate $ Let "x" (Literal 1) (Variable "x")
-    print $ evaluate $ IndexExpression (Record (Map.fromList [("x", Literal 1), ("y", Literal 2)])) 1
-    print $ evaluate $ Modify (Record (Map.fromList [("x", Literal 1), ("y", Literal 2)])) 1 (Literal 3)
+    -- λx.x.Name
+    let t =
+            ForAll
+                "t1"
+                Universal
+                ( ForAll
+                    "t2"
+                    (RecordKind (Map.singleton "Name" (Parameter "t1")))
+                    (Parameter "t2" `Arrow` Parameter "t1")
+                )
+    let program =
+            Poly
+                (Abstraction "x" (Parameter "t2") (Dot (Variable "x") t "Name"))
+                t
+
+    putStrLn $ "[Explicit]        " ++ show program
+    putStrLn $ "[Implementation]  " ++ show (compile [] [] program)

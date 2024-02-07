@@ -18,6 +18,7 @@ executable FEUP-DISS-exe
     Implementation.Compilation
     Implementation.Evaluator
     Implementation.Terms
+    Explicit.Parser
     Explicit.Terms
     Explicit.Types
 

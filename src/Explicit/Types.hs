@@ -14,6 +14,7 @@ instance Show Kind where
 
 data Type
     = Int
+    | String
     | Parameter String
     | Arrow Type Type
     | Record (Map.Map String Type)
@@ -21,6 +22,7 @@ data Type
 
 instance Show Type where
     show Int = "Int"
+    show String = "String"
     show (Parameter p) = p
     show (Arrow t1 t2) = show t1 ++ " -> " ++ show t2
     show (ForAll p k t) = "∀" ++ p ++ "::" ++ show k ++ "." ++ show t
@@ -28,6 +30,7 @@ instance Show Type where
 
 instance Eq Type where
     Int == Int = True
+    String == String = True
     (Parameter a) == (Parameter b) = a == b
     (ForAll p1 k1 t1) == (ForAll p2 k2 t2) = k1 == k2 && t1 == substituteType p2 (Parameter p1) t2
     _ == _ = False
@@ -36,6 +39,7 @@ substituteType :: String -> Type -> Type -> Type
 substituteType var t = sub
   where
     sub Int = Int
+    sub String = String
     sub (Parameter p)
         | var == p = t
         | otherwise = Parameter p

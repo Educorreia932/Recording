@@ -1,6 +1,7 @@
-module Parser (parseExpression) where
+module Explicit.Parser (parseExpression) where
 
-import Terms (Expression (..))
+import Explicit.Terms
+import Explicit.Types
 
 import Data.Functor ((<&>))
 import Text.Parsec (ParseError, parse, (<|>))
@@ -15,7 +16,7 @@ lexer :: TokenParser ()
 lexer =
     makeTokenParser
         emptyDef
-            { reservedOpNames = ["λ", "\\"]
+            { reservedOpNames = ["λ", "\\", ".", "->", ":"]
             , reservedNames = []
             }
 
@@ -35,21 +36,48 @@ number :: Parser Expression
 number = integer <&> (Literal . fromIntegral)
 
 variable :: Parser Expression
-variable = identifier <&> Variable
+variable = identifier <&> Variable <*> pure []
 
 lambda :: Parser Expression
 lambda = do
     _ <- Token.reservedOp lexer "λ" <|> Token.reservedOp lexer "\\"
-    (x:xs) <- many1 identifier
+    x <- identifier
+    _ <- Token.reservedOp lexer ":"
+    t <- typeAnnotation
+    _ <- Token.reservedOp lexer "="
+    Abstraction x t <$> term
+
+dotExpression :: Parser Expression
+dotExpression = do
+    e <- identifier
     _ <- Token.reservedOp lexer "."
-    foldl (\acc v -> acc <$> Abstraction v) (Abstraction x) xs <$> expression
+    field <- identifier
+    _ <- Token.reservedOp lexer ":"
+    t <- typeAnnotation
+    return (Dot (Variable e []) t field)
+
+typeParameter :: Parser Type
+typeParameter = identifier <&> Parameter
+
+arrowType :: Parser Type
+arrowType = do
+    t1 <- typeAnnotation
+    _ <- Token.reservedOp lexer "->"
+    Arrow t1 <$> typeAnnotation
+
+typeAnnotation :: Parser Type
+typeAnnotation =
+    typeParameter
+
+-- <|> arrowType
 
 term :: Parser Expression
 term =
-    parentheses expression
-        <|> lambda
-        <|> variable
+    dotExpression
+        <|> parentheses expression
         <|> number
+        <|> variable
+        <|> lambda
 
 expression :: Parser Expression
 expression = do

@@ -3,53 +3,50 @@ module ParserTest where
 import System.Exit qualified as Exit
 import Test.HUnit
 
-import Terms (Expression (..))
-import Evaluator (evaluate)
-import Parser (parseExpression)
+import Data.Map qualified as Map
+import Explicit.Parser
+import Explicit.Terms
+import Explicit.Types qualified as T
 
 testParser :: Test
 testParser =
   TestList
     [ TestCase
         $ assertEqual
-          "Literal"
+          "Integer"
           (Right (Literal 42))
           (parseExpression "42")
     , TestCase
         $ assertEqual
-          "Negative literal"
+          "Negative Integer"
           (Right (Literal (-42)))
           (parseExpression "-42")
     , TestCase
         $ assertEqual
-          "Abstraction"
-          (Right (Abstraction "x" (Variable "x")))
-          (parseExpression "λx.x")
+          "Identity (Universal kind)"
+          ( Right
+              ( Abstraction
+                  "x"
+                  (T.ForAll "t" T.Universal (T.Parameter "t" `T.Arrow` T.Parameter "t"))
+                  (Variable "x" [])
+              )
+          )
+          (parseExpression "λx : ∀t::U.(t -> t) -> x")
     , TestCase
         $ assertEqual
-          "Application with literal"
-          (Right (Application (Abstraction "x" (Variable "x")) (Literal 42)))
-          (parseExpression "(λx.x) 42")
-    , TestCase
-        $ assertEqual
-          "Application with variable"
-          (Right (Application (Abstraction "x" (Variable "x")) (Variable "y")))
-          (parseExpression "(λx.x) y")
-    , TestCase
-        $ assertEqual
-          "Grouping"
-          (Right (Application (Abstraction "x" (Variable "x")) (Application (Abstraction "y" (Variable "y")) (Literal 42))))
-          (parseExpression "(λx.x) ((λy.y) 42)")
-    , TestCase
-        $ assertEqual
-          "Function with multiple arguments"
-          (Right (Application (Application (Abstraction "x" (Abstraction "y" (Variable "x"))) (Literal 1)) (Literal 2)))
-          (parseExpression "(λx.λy.x) 1 2")
-    , TestCase
-        $ assertEqual
-          "Currying"
-          (Right (Application (Application (Abstraction "x" (Abstraction "y" (Variable "x"))) (Literal 1)) (Literal 2)))
-          (parseExpression "(λx y.x) 1 2")
+          "Identity (Record kind)"
+          ( Right
+              ( Abstraction
+                  "x"
+                  ( T.ForAll
+                      "t"
+                      (T.RecordKind (Map.singleton "Name" T.String))
+                      (T.Parameter "t" `T.Arrow` T.Parameter "t")
+                  )
+                  (Variable "x" [])
+              )
+          )
+          (parseExpression "λx : ∀t::{{ Name: String }}.(t -> t) -> x")
     ]
 
 tests :: Test

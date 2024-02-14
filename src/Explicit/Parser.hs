@@ -1,9 +1,10 @@
 module Explicit.Parser (parseExpression) where
 
 import Explicit.Terms
-import Explicit.Types
+import qualified Explicit.Types as T
 
 import Data.Functor ((<&>))
+import Data.Map qualified as Map
 import Text.Parsec (ParseError, parse, (<|>))
 import Text.Parsec.Char (letter, spaces)
 import Text.Parsec.Combinator (eof, many1)
@@ -38,15 +39,6 @@ number = integer <&> (Literal . fromIntegral)
 variable :: Parser Expression
 variable = identifier <&> Variable <*> pure []
 
-lambda :: Parser Expression
-lambda = do
-    _ <- Token.reservedOp lexer "λ" <|> Token.reservedOp lexer "\\"
-    x <- identifier
-    _ <- Token.reservedOp lexer ":"
-    t <- typeAnnotation
-    _ <- Token.reservedOp lexer "="
-    Abstraction x t <$> term
-
 dotExpression :: Parser Expression
 dotExpression = do
     e <- identifier
@@ -56,31 +48,66 @@ dotExpression = do
     t <- typeAnnotation
     return (Dot (Variable e []) t field)
 
-typeParameter :: Parser Type
-typeParameter = identifier <&> Parameter
+recordKind :: Parser T.Kind
+recordKind = do
+    _ <- Token.reserved lexer "{{"
+    k <- identifier
+    _ <- Token.reserved lexer ":"
+    t <- typeAnnotation
+    _ <- Token.reserved lexer "}}"
+    pure (T.RecordKind (Map.singleton k t))
 
-arrowType :: Parser Type
+universalKind :: Parser T.Kind
+universalKind = Token.reserved lexer "U" >> pure T.Universal
+
+kind :: Parser T.Kind
+kind = recordKind <|> universalKind
+
+stringType :: Parser T.Type
+stringType = Token.reserved lexer "String" >> pure T.String
+
+typeParameter :: Parser T.Type
+typeParameter = T.Parameter <$> identifier
+
+arrowType :: Parser T.Type
 arrowType = do
     t1 <- typeAnnotation
     _ <- Token.reservedOp lexer "->"
-    Arrow t1 <$> typeAnnotation
+    T.Arrow t1 <$> typeAnnotation
 
-typeAnnotation :: Parser Type
+forAll :: Parser T.Type
+forAll = do
+    _ <- Token.reservedOp lexer "∀"
+    v <- identifier
+    _ <- Token.reservedOp lexer "::"
+    k <- kind
+    _ <- Token.reservedOp lexer "."
+    T.ForAll v k <$> typeAnnotation
+
+typeAnnotation :: Parser T.Type
 typeAnnotation =
-    typeParameter
+    forAll
+        <|> parentheses arrowType
+        <|> stringType
+        <|> typeParameter
 
--- <|> arrowType
+lambda :: Parser Expression
+lambda = do
+    _ <- Token.reservedOp lexer "λ" <|> Token.reservedOp lexer "\\"
+    x <- identifier
+    _ <- Token.reservedOp lexer ":"
+    t <- typeAnnotation
+    _ <- Token.reservedOp lexer "->"
+    Abstraction x t <$> term
 
 term :: Parser Expression
 term =
-    dotExpression
-        <|> parentheses expression
-        <|> number
+    lambda
         <|> variable
-        <|> lambda
+        <|> number
 
-expression :: Parser Expression
-expression = do
+application :: Parser Expression
+application = do
     terms <- many1 term
     return (foldl1 Application terms)
 
@@ -92,4 +119,4 @@ contents parser = do
     return r
 
 parseExpression :: String -> Either ParseError Expression
-parseExpression = parse (contents expression) "<stdin>"
+parseExpression = parse (contents term) "<stdin>"

@@ -1,24 +1,24 @@
 module Explicit.Parser (parseExpression) where
 
 import Explicit.Terms
-import qualified Explicit.Types as T
+import Explicit.Types qualified as T
 
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
+import Data.Map.Ordered qualified as OMap
 import Text.Parsec (ParseError, parse, (<|>))
 import Text.Parsec.Char (letter, spaces)
-import Text.Parsec.Combinator (eof, many1)
+import Text.Parsec.Combinator (eof, many1, sepBy)
 import Text.Parsec.Language (emptyDef)
 import Text.Parsec.String (Parser)
-import Text.Parsec.Token (TokenParser, makeTokenParser, reservedNames, reservedOpNames)
 import Text.Parsec.Token qualified as Token
 
-lexer :: TokenParser ()
+lexer :: Token.TokenParser ()
 lexer =
-    makeTokenParser
+    Token.makeTokenParser
         emptyDef
-            { reservedOpNames = ["λ", "\\", ".", "->", ":"]
-            , reservedNames = []
+            { Token.reservedOpNames = ["λ", "\\", ".", "->", ":"]
+            , Token.reservedNames = []
             }
 
 lexeme :: Parser a -> Parser a
@@ -36,8 +36,24 @@ integer = lexeme $ Token.integer lexer
 number :: Parser Expression
 number = integer <&> (Literal . fromIntegral)
 
+string :: Parser Expression
+string = lexeme $ Token.stringLiteral lexer <&> String
+
 variable :: Parser Expression
 variable = identifier <&> Variable <*> pure []
+
+record :: Parser Expression
+record = do
+    _ <- Token.reservedOp lexer "{"
+    fields <- OMap.fromList <$> (field `sepBy` Token.comma lexer)
+    _ <- Token.reservedOp lexer "}"
+    return (ERecord fields)
+  where
+    field = do
+        k <- identifier
+        _ <- Token.reservedOp lexer ":"
+        v <- term
+        return (k, v)
 
 dotExpression :: Parser Expression
 dotExpression = do
@@ -103,6 +119,8 @@ lambda = do
 term :: Parser Expression
 term =
     lambda
+        <|> record
+        <|> string
         <|> variable
         <|> number
 

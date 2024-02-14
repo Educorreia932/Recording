@@ -15,46 +15,54 @@ executable FEUP-DISS-exe
   import:           warnings
   main-is:          Main.hs
   other-modules:
-    Implementation.Compilation
-    Implementation.Evaluator
-    Implementation.Terms
     Explicit.Parser
     Explicit.Terms
     Explicit.Types
+    Implementation.Compilation
+    Implementation.Evaluator
+    Implementation.Terms
 
   build-depends:
-    , base    ^>=4.17.2.0
-    , parsec
+    , base                ^>=4.17.2.0
     , containers
     , ordered-containers
+    , parsec
 
   hs-source-dirs:   src
   default-language: GHC2021
 
--- library FEUP-DISS-lib
---   exposed-modules:
---     Terms
---     Evaluator
---     Parser
+library FEUP-DISS-lib
+  exposed-modules:
+    Explicit.Parser
+    Explicit.Terms
+    Explicit.Types
+    Implementation.Compilation
+    Implementation.Evaluator
+    Implementation.Terms
 
---   build-depends:
---     , base    ^>=4.17.2.0
---     , parsec
+  build-depends:
+    , base                ^>=4.17.2.0
+    , containers
+    , ordered-containers
+    , parsec
 
---   hs-source-dirs:   src
---   default-language: GHC2021
+  hs-source-dirs:   src
+  default-language: GHC2021
 
--- test-suite tests
---   type:              exitcode-stdio-1.0
---   main-is:           Main.hs
---   other-modules:
---     EvaluatorTest
---     ParserTest
+test-suite tests
+  type:             exitcode-stdio-1.0
+  main-is:          Main.hs
+  other-modules:
+    -- EvaluatorTest
+    CompilationTest
+    ParserTest
 
---   build-depends:
---     , base           ^>=4.17.2.0
---     , FEUP-DISS-lib
---     , HUnit          ^>=1.6
+  build-depends:
+    , base           ^>=4.17.2.0
+    , FEUP-DISS-lib
+    , HUnit          ^>=1.6
+    , containers
+    , ordered-containers
 
---   hs-source-dirs:    tests
---   default-language:  GHC2021
+  hs-source-dirs:   tests
+  default-language: GHC2021

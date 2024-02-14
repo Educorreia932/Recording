@@ -4,6 +4,7 @@ import System.Exit qualified as Exit
 import Test.HUnit
 
 import Data.Map qualified as Map
+import Data.Map.Ordered qualified as OMap
 import Explicit.Parser
 import Explicit.Terms
 import Explicit.Types qualified as T
@@ -21,6 +22,11 @@ testParser =
           "Negative Integer"
           (Right (Literal (-42)))
           (parseExpression "-42")
+    , TestCase
+        $ assertEqual
+          "Record"
+          (Right (ERecord (OMap.singleton ("Name", String "John"))))
+          (parseExpression "{ Name: \"Joe\" }")
     , TestCase
         $ assertEqual
           "Identity (Universal kind)"

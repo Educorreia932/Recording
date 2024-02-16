@@ -11,51 +11,96 @@ import Explicit.Types qualified as T
 
 testParser :: Test
 testParser =
-  TestList
-    [ TestCase
-        $ assertEqual
-          "Integer"
-          (Right (Literal 42))
-          (parseExpression "42")
-    , TestCase
-        $ assertEqual
-          "Negative Integer"
-          (Right (Literal (-42)))
-          (parseExpression "-42")
-    , TestCase
-        $ assertEqual
-          "Record"
-          (Right (ERecord (OMap.singleton ("Name", String "John"))))
-          (parseExpression "{ Name: \"Joe\" }")
-    , TestCase
-        $ assertEqual
-          "Identity (Universal kind)"
-          ( Right
-              ( Abstraction
-                  "x"
-                  (T.ForAll "t" T.Universal (T.Parameter "t" `T.Arrow` T.Parameter "t"))
-                  (Variable "x" [])
-              )
-          )
-          (parseExpression "λx : ∀t::U.(t -> t) -> x")
-    , TestCase
-        $ assertEqual
-          "Identity (Record kind)"
-          ( Right
-              ( Abstraction
-                  "x"
-                  ( T.ForAll
-                      "t"
-                      (T.RecordKind (Map.singleton "Name" T.String))
-                      (T.Parameter "t" `T.Arrow` T.Parameter "t")
-                  )
-                  (Variable "x" [])
-              )
-          )
-          (parseExpression "λx : ∀t::{{ Name: String }}.(t -> t) -> x")
-    ]
+    TestList
+        [ TestCase
+            $ assertEqual
+                "Integer"
+                (Literal 42)
+                (parseExpression "42")
+        , TestCase
+            $ assertEqual
+                "Negative Integer"
+                (Literal (-42))
+                (parseExpression "-42")
+        , TestCase
+            $ assertEqual
+                "Record"
+                (ERecord (OMap.singleton ("Name", String "Joe")))
+                (parseExpression "{ Name: \"Joe\" }")
+        , TestCase
+            $ assertEqual
+                "Field access"
+                ( Dot
+                    (ERecord (OMap.singleton ("Name", String "Joe")))
+                    (T.Record (Map.singleton "Name" T.String))
+                    "Name"
+                )
+                (parseExpression "({ Name: \"Joe\" } : { Name: String }).Name")
+        , TestCase
+            $ assertEqual
+                "Application"
+                ( Application (Variable "x" []) (Variable "y" [])
+                )
+                (parseExpression "(x) y")
+        , TestCase
+            $ assertEqual
+                "Identity (Universal kind)"
+                ( Abstraction
+                    "x"
+                    (T.ForAll "t" T.Universal (T.Parameter "t" `T.Arrow` T.Parameter "t"))
+                    (Variable "x" [])
+                )
+                (parseExpression "λx : ∀t::U.(t -> t) -> x")
+        , TestCase
+            $ assertEqual
+                "Identity (Record kind)"
+                ( Abstraction
+                    "x"
+                    ( T.ForAll
+                        "t"
+                        (T.RecordKind (Map.singleton "Name" T.String))
+                        (T.Parameter "t" `T.Arrow` T.Parameter "t")
+                    )
+                    (Variable "x" [])
+                )
+                (parseExpression "λx : ∀t::{{ Name: String }}.(t -> t) -> x")
+        , TestCase
+            $ assertEqual
+                "Polymorphic field access"
+                ( Poly
+                    ( Abstraction
+                        "x"
+                        (T.Parameter "t2")
+                        ( Dot
+                            (Variable "x" [])
+                            (T.Parameter "t2")
+                            "Name"
+                        )
+                    )
+                    ( T.ForAll
+                        "t1"
+                        T.Universal
+                        ( T.ForAll
+                            "t2"
+                            (T.RecordKind (Map.singleton "Name" T.String))
+                            (T.Parameter "t1" `T.Arrow` T.Parameter "t2")
+                        )
+                    )
+                )
+                (parseExpression "Poly(λx : t2 -> (x : t2).Name): ∀t1::U.∀t2::{{ Name: String }}.(t1 -> t2)")
+        , TestCase
+            $ assertEqual
+                "Let expression"
+                ( Let
+                    "x"
+                    T.String
+                    (Literal 42)
+                    (Variable "x" [])
+                )
+                (parseExpression "let x : String = 42 in x")
+        ]
 
 tests :: Test
 tests =
-  TestList
-    [testParser]
+    TestList
+        [testParser]

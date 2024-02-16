@@ -6,12 +6,13 @@ import Explicit.Types qualified as T
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Map.Ordered qualified as OMap
-import Text.Parsec (ParseError, parse, (<|>))
+import Text.Parsec (ParseError, alphaNum, many, parse, (<|>))
 import Text.Parsec.Char (letter, spaces)
 import Text.Parsec.Combinator (eof, many1, sepBy)
 import Text.Parsec.Language (emptyDef)
 import Text.Parsec.String (Parser)
 import Text.Parsec.Token qualified as Token
+import Text.ParserCombinators.Parsec (try)
 
 lexer :: Token.TokenParser ()
 lexer =
@@ -25,7 +26,10 @@ lexeme :: Parser a -> Parser a
 lexeme parser = parser <* spaces
 
 identifier :: Parser String
-identifier = lexeme $ many1 letter
+identifier = lexeme $ do
+    first <- letter
+    rest <- many alphaNum
+    return (first : rest)
 
 parentheses :: Parser a -> Parser a
 parentheses = Token.parens lexer
@@ -42,6 +46,14 @@ string = lexeme $ Token.stringLiteral lexer <&> String
 variable :: Parser Expression
 variable = identifier <&> Variable <*> pure []
 
+variableInstantiation :: Parser Expression
+variableInstantiation = do
+    _ <- Token.reservedOp lexer "("
+    x <- identifier
+    types <- many1 typeAnnotation
+    _ <- Token.reservedOp lexer ")"
+    pure (Variable x types)
+
 record :: Parser Expression
 record = do
     _ <- Token.reservedOp lexer "{"
@@ -57,12 +69,13 @@ record = do
 
 dotExpression :: Parser Expression
 dotExpression = do
-    e <- identifier
-    _ <- Token.reservedOp lexer "."
-    field <- identifier
+    _ <- Token.reservedOp lexer "("
+    e <- term
     _ <- Token.reservedOp lexer ":"
     t <- typeAnnotation
-    return (Dot (Variable e []) t field)
+    _ <- Token.reserved lexer ")"
+    _ <- Token.reservedOp lexer "."
+    Dot e t <$> identifier
 
 recordKind :: Parser T.Kind
 recordKind = do
@@ -85,6 +98,15 @@ stringType = Token.reserved lexer "String" >> pure T.String
 typeParameter :: Parser T.Type
 typeParameter = T.Parameter <$> identifier
 
+recordType :: Parser T.Type
+recordType = do
+    _ <- Token.reserved lexer "{"
+    k <- identifier
+    _ <- Token.reserved lexer ":"
+    t <- typeAnnotation
+    _ <- Token.reserved lexer "}"
+    pure (T.Record (Map.singleton k t))
+
 arrowType :: Parser T.Type
 arrowType = do
     t1 <- typeAnnotation
@@ -104,8 +126,27 @@ typeAnnotation :: Parser T.Type
 typeAnnotation =
     forAll
         <|> parentheses arrowType
+        <|> recordType
         <|> stringType
         <|> typeParameter
+
+poly :: Parser Expression
+poly = do
+    _ <- Token.reserved lexer "Poly"
+    e <- parentheses term
+    _ <- Token.reservedOp lexer ":"
+    Poly e <$> typeAnnotation
+
+letExpression :: Parser Expression
+letExpression = do
+    _ <- Token.reserved lexer "let"
+    x <- identifier
+    _ <- Token.reservedOp lexer ":"
+    t <- typeAnnotation
+    _ <- Token.reservedOp lexer "="
+    e1 <- term
+    _ <- Token.reserved lexer "in"
+    Let x t e1 <$> term
 
 lambda :: Parser Expression
 lambda = do
@@ -119,15 +160,20 @@ lambda = do
 term :: Parser Expression
 term =
     lambda
+        <|> letExpression
+        <|> poly
         <|> record
+        <|> try dotExpression
+        <|> try variableInstantiation
+        <|> application
         <|> string
         <|> variable
         <|> number
 
 application :: Parser Expression
 application = do
-    terms <- many1 term
-    return (foldl1 Application terms)
+    e1 <- parentheses term
+    Application e1 <$> term
 
 contents :: Parser a -> Parser a
 contents parser = do
@@ -136,5 +182,7 @@ contents parser = do
     eof
     return r
 
-parseExpression :: String -> Either ParseError Expression
-parseExpression = parse (contents term) "<stdin>"
+parseExpression :: String -> Expression
+parseExpression e = case parse (contents term) "<stdin>" e of
+    Left err -> error (show err)
+    Right expr -> expr

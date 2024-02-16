@@ -1,7 +1,10 @@
 module Implementation.Evaluator (evaluate) where
 
+import Data.Either (fromLeft)
 import Data.Map.Ordered qualified as Map
-import Implementation.Terms (Expression (..), VariableIdentifier)
+import Explicit.Parser
+import Implementation.Compilation
+import Implementation.Terms
 
 freeVariables :: Expression -> [VariableIdentifier]
 freeVariables (Literal _) = []
@@ -30,19 +33,22 @@ substitute var e = sub
         | otherwise = Abstraction v $ sub body
     sub (Application e1 e2) = Application (sub e1) (sub e2)
 
-evaluate :: Expression -> Expression
-evaluate (Let var e1 e2) = evaluate $ substitute var e1 e2
-evaluate (Modify (Record r) i e) =
+evaluate' :: Expression -> Expression
+evaluate' (Let var e1 e2) = evaluate' $ substitute var e1 e2
+evaluate' (Modify (Record r) i e) =
     let (k, _) = case Map.elemAt r i of
             Just x -> x
             Nothing -> error "Index out of bounds"
      in Record $ Map.alter (\_ -> Just e) k r
--- evaluate (IndexExpression e i) = case e of
---     Record m -> case Map.elemAt m i of
---         Just (_, e') -> e'
---         Nothing -> error "Index out of bounds"
---     _ -> error "Indexing non-record"
-evaluate (Application fun arg) = case evaluate fun of
-    Abstraction var body -> evaluate $ substitute var arg body
+evaluate' (IndexExpression e i) = case e of
+    Record m -> case Map.elemAt m (fromLeft (-1) i - 1) of
+        Just (_, e') -> e'
+        Nothing -> error "Index out of bounds"
+    _ -> error "Indexing non-record"
+evaluate' (Application fun arg) = case evaluate' fun of
+    Abstraction var body -> evaluate' $ substitute var arg body
     other -> Application other arg
-evaluate e = e
+evaluate' e = e
+
+evaluate :: String -> Expression
+evaluate = evaluate' . compile

@@ -6,7 +6,7 @@ import Explicit.Types qualified as T
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Map.Ordered qualified as OMap
-import Text.Parsec (ParseError, alphaNum, many, parse, (<|>))
+import Text.Parsec (alphaNum, many, parse, (<|>))
 import Text.Parsec.Char (letter, spaces)
 import Text.Parsec.Combinator (eof, many1, sepBy)
 import Text.Parsec.Language (emptyDef)
@@ -80,11 +80,15 @@ dotExpression = do
 recordKind :: Parser T.Kind
 recordKind = do
     _ <- Token.reserved lexer "{{"
-    k <- identifier
-    _ <- Token.reserved lexer ":"
-    t <- typeAnnotation
+    fields <- Map.fromList <$> (field `sepBy` Token.comma lexer)
     _ <- Token.reserved lexer "}}"
-    pure (T.RecordKind (Map.singleton k t))
+    return (T.RecordKind fields)
+  where
+    field = do
+        k <- identifier
+        _ <- Token.reservedOp lexer ":"
+        t <- typeAnnotation
+        return (k, t)
 
 universalKind :: Parser T.Kind
 universalKind = Token.reserved lexer "U" >> pure T.Universal
@@ -95,17 +99,24 @@ kind = recordKind <|> universalKind
 stringType :: Parser T.Type
 stringType = Token.reserved lexer "String" >> pure T.String
 
+intType :: Parser T.Type
+intType = Token.reserved lexer "Int" >> pure T.Int
+
 typeParameter :: Parser T.Type
 typeParameter = T.Parameter <$> identifier
 
 recordType :: Parser T.Type
 recordType = do
-    _ <- Token.reserved lexer "{"
-    k <- identifier
-    _ <- Token.reserved lexer ":"
-    t <- typeAnnotation
-    _ <- Token.reserved lexer "}"
-    pure (T.Record (Map.singleton k t))
+    _ <- Token.reservedOp lexer "{"
+    fields <- Map.fromList <$> (field `sepBy` Token.comma lexer)
+    _ <- Token.reservedOp lexer "}"
+    return (T.Record fields)
+  where
+    field = do
+        k <- identifier
+        _ <- Token.reservedOp lexer ":"
+        t <- typeAnnotation
+        return (k, t)
 
 arrowType :: Parser T.Type
 arrowType = do
@@ -128,6 +139,7 @@ typeAnnotation =
         <|> parentheses arrowType
         <|> recordType
         <|> stringType
+        <|> intType
         <|> typeParameter
 
 poly :: Parser Expression

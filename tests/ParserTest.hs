@@ -25,17 +25,17 @@ testParser =
         , TestCase
             $ assertEqual
                 "Record"
-                (ERecord (OMap.singleton ("Name", String "Joe")))
-                (parseExpression "{ Name: \"Joe\" }")
+                (ERecord (OMap.fromList [("Name", String "Joe"), ("Office", Literal 433)]))
+                (parseExpression "{ Name: \"Joe\", Office: 433 }")
         , TestCase
             $ assertEqual
                 "Field access"
                 ( Dot
-                    (ERecord (OMap.singleton ("Name", String "Joe")))
-                    (T.Record (Map.singleton "Name" T.String))
+                    (ERecord (OMap.fromList [("Name", String "Joe"), ("Office", Literal 433)]))
+                    (T.Record (Map.fromList [("Name", T.String), ("Office", T.Int)]))
                     "Name"
                 )
-                (parseExpression "({ Name: \"Joe\" } : { Name: String }).Name")
+                (parseExpression "({ Name: \"Joe\", Office: 433 } : { Name: String, Office: Int }).Name")
         , TestCase
             $ assertEqual
                 "Application"

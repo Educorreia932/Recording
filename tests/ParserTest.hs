@@ -39,6 +39,16 @@ testParser =
         , TestCase
             $ assertEqual
                 "Application"
+                ( Modify
+                    (ERecord (OMap.singleton ("Name", String "Joe")))
+                    (T.Record (Map.singleton "Name" T.String))
+                    "Name"
+                    (String "Hanako")
+                )
+                (parseExpression "modify({ Name: \"Joe\"} : { Name: String }, Name, \"Hanako\")")
+        , TestCase
+            $ assertEqual
+                "Application"
                 ( Application (Variable "x" []) (Variable "y" [])
                 )
                 (parseExpression "(x) y")
@@ -47,7 +57,7 @@ testParser =
                 "Identity (Universal kind)"
                 ( Abstraction
                     "x"
-                    (T.ForAll "t" T.Universal (T.Parameter "t" `T.Arrow` T.Parameter "t"))
+                    (T.ForAll ("t", T.Universal) (T.Parameter "t" `T.Arrow` T.Parameter "t"))
                     (Variable "x" [])
                 )
                 (parseExpression "λx : ∀t::U.(t -> t) -> x")
@@ -57,8 +67,7 @@ testParser =
                 ( Abstraction
                     "x"
                     ( T.ForAll
-                        "t"
-                        (T.RecordKind (Map.singleton "Name" T.String))
+                        ("t", (T.RecordKind (Map.singleton "Name" T.String)))
                         (T.Parameter "t" `T.Arrow` T.Parameter "t")
                     )
                     (Variable "x" [])
@@ -78,11 +87,9 @@ testParser =
                         )
                     )
                     ( T.ForAll
-                        "t1"
-                        T.Universal
+                        ("t1", T.Universal)
                         ( T.ForAll
-                            "t2"
-                            (T.RecordKind (Map.singleton "Name" T.String))
+                            ("t2", T.RecordKind (Map.singleton "Name" T.String))
                             (T.Parameter "t1" `T.Arrow` T.Parameter "t2")
                         )
                     )

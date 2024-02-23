@@ -51,7 +51,7 @@ library FEUP-DISS-lib
 
 test-suite tests
   type:             exitcode-stdio-1.0
-  main-is:          Main.hs
+  main-is:          Tests.hs
   other-modules:
     EvaluatorTest
     CompilationTest

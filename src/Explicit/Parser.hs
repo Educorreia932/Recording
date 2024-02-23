@@ -77,6 +77,19 @@ dotExpression = do
     _ <- Token.reservedOp lexer "."
     Dot e t <$> identifier
 
+modify :: Parser Expression
+modify = do
+    _ <- Token.reserved lexer "modify("
+    e1 <- term
+    _ <- Token.reservedOp lexer ":"
+    t <- typeAnnotation
+    _ <- Token.reservedOp lexer ","
+    l <- identifier
+    _ <- Token.reservedOp lexer ","
+    e2 <- term
+    _ <- Token.reservedOp lexer ")"
+    return $ Modify e1 t l e2
+
 recordKind :: Parser T.Kind
 recordKind = do
     _ <- Token.reserved lexer "{{"
@@ -127,11 +140,11 @@ arrowType = do
 forAll :: Parser T.Type
 forAll = do
     _ <- Token.reservedOp lexer "∀"
-    v <- identifier
+    t <- identifier
     _ <- Token.reservedOp lexer "::"
     k <- kind
     _ <- Token.reservedOp lexer "."
-    T.ForAll v k <$> typeAnnotation
+    T.ForAll (t, k) <$> typeAnnotation
 
 typeAnnotation :: Parser T.Type
 typeAnnotation =
@@ -175,6 +188,7 @@ term =
         <|> letExpression
         <|> poly
         <|> record
+        <|> modify
         <|> try dotExpression
         <|> try variableInstantiation
         <|> application

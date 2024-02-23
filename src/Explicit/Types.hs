@@ -6,11 +6,13 @@ import Data.Map qualified as Map
 data Kind
     = Universal
     | RecordKind (Map.Map String Type)
-    deriving (Eq)
+    deriving (Eq, Ord)
 
 instance Show Kind where
     show Universal = "U"
     show (RecordKind m) = "{{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }}"
+
+type KindedType = (String, Kind)
 
 data Type
     = Int
@@ -18,15 +20,15 @@ data Type
     | Parameter String
     | Arrow Type Type
     | Record (Map.Map String Type)
-    | ForAll String Kind Type
-    deriving (Eq)
+    | ForAll KindedType Type
+    deriving (Eq, Ord)
 
 instance Show Type where
     show Int = "Int"
     show String = "String"
     show (Parameter p) = p
     show (Arrow t1 t2) = "(" ++ show t1 ++ " -> " ++ show t2 ++ ")"
-    show (ForAll p k t) = "∀" ++ p ++ "::" ++ show k ++ "." ++ show t
+    show (ForAll (t, k) t') = "∀" ++ t ++ "::" ++ show k ++ "." ++ show t'
     show (Record m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }"
 
 substituteType :: String -> Type -> Type -> Type
@@ -39,6 +41,22 @@ substituteType var t = sub
         | otherwise = Parameter p
     sub (Arrow t1 t2) = Arrow (sub t1) (sub t2)
     sub (Record m) = Record $ fmap sub m
-    sub (ForAll p k t')
-        | var == p = ForAll p k t'
-        | otherwise = ForAll p k $ sub t'
+    sub (ForAll (l, k) t')
+        | var == l = ForAll (l, k) t'
+        | otherwise = ForAll (l, k) $ sub t'
+
+typeParameters :: Type -> [String]
+typeParameters Int = []
+typeParameters String = []
+typeParameters (Parameter p) = [p]
+typeParameters (Arrow t1 t2) = typeParameters t1 ++ typeParameters t2
+typeParameters (Record m) = concatMap typeParameters (Map.elems m)
+typeParameters (ForAll (l, _) t') = l : typeParameters t'
+
+typeKinds :: Type -> [Kind]
+typeKinds Int = []
+typeKinds String = []
+typeKinds (Parameter _) = [Universal]
+typeKinds (Arrow t1 t2) = typeKinds t1 ++ typeKinds t2
+typeKinds (Record m) = concatMap typeKinds (Map.elems m)
+typeKinds (ForAll (_, k) t') = k : typeKinds t'

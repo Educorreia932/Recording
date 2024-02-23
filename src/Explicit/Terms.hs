@@ -14,7 +14,7 @@ data Expression
     | Let String T.Type Expression Expression
     | ERecord (Map.OMap String Expression)
     | Dot Expression T.Type String
-    | Modify Expression Int Expression
+    | Modify Expression T.Type String Expression
     deriving (Eq)
 
 instance Show Expression where
@@ -26,5 +26,5 @@ instance Show Expression where
     show (Poly e t) = "Poly(" ++ show e ++ "): " ++ show t
     show (Let x t e1 e2) = "let " ++ x ++ " : " ++ show t ++ " = " ++ show e1 ++ " in " ++ show e2
     show (ERecord m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }"
-    show (Dot e t x) = show e ++ "." ++ x ++ ":" ++ show t
-    show (Modify e1 i e2) = "modify(" ++ show e1 ++ ", " ++ show i ++ ", " ++ show e2 ++ ")"
+    show (Dot e t x) = "(" ++ show e ++ " : " ++ show t ++ ")." ++ x
+    show (Modify e1 t l e2) = "modify(" ++ show e1 ++ " : " ++ show t ++ ", " ++ l ++ ", " ++ show e2 ++ ")"

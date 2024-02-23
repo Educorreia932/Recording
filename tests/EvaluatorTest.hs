@@ -3,6 +3,7 @@ module EvaluatorTest where
 import System.Exit qualified as Exit
 import Test.HUnit (Test (TestCase, TestList), assertEqual)
 
+import Data.Map.Ordered qualified as OMap
 import Explicit.Parser
 import Implementation.Evaluator
 import Implementation.Terms
@@ -53,8 +54,31 @@ testEvaluate =
         , TestCase
             $ assertEqual
                 "Field access"
+                (Literal 433)
+                (evaluate "({ Name: \"Joe\", Office: 433 } : { Name: String, Office: Int }).Office")
+        , TestCase
+            $ assertEqual
+                "Modification"
+                (Record (OMap.singleton ("Name", String "Hanako")))
+                (evaluate "modify({ Name: \"Joe\"} : { Name: String }, Name, \"Hanako\")")
+        , TestCase
+            $ assertEqual
+                "Let expression"
+                (Literal 443)
+                (evaluate "let office: Int = 443 in office")
+        , TestCase
+            $ assertEqual
+                "Polymorphic field access"
                 (String "Joe")
-                (evaluate "({ Name: \"Joe\" } : { Name: String }).Name ")
+                ( evaluate
+                    ( let t = "∀t1::U.∀t2::{{ Name: String }}.(t1 -> t2)"
+                       in "let name: "
+                            ++ t
+                            ++ "= Poly(λx: t2 -> (x : t2).Name): "
+                            ++ t
+                            ++ "in ((name String { Name: String, Office: Int })) { Name: \"Joe\", Office: 443 }"
+                    )
+                )
         ]
 
 tests :: Test

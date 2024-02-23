@@ -1,10 +1,9 @@
 module Implementation.Compilation (compile) where
 
+import Control.Monad.State
 import Data.List (find)
 import Data.Map qualified as Map
-import Data.Maybe (fromMaybe, isJust)
 import Data.Set qualified as Set
-import Debug.Trace
 import Explicit.Parser
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
@@ -29,97 +28,102 @@ instance Indexable T.Kind where
    indexSet T.Universal = Set.empty
    indexSet (T.RecordKind m) = Set.fromList $ Map.toList m
 
-idx :: T.Type -> String -> IndexAssignment -> Maybe I.Index
-idx (T.Record r) l _ = Just $ Left $ Map.findIndex l r + 1
-idx t l indexAssign =
+type CompilationState = (IndexAssignment, TypeAssignment)
+
+idx :: IndexType -> IndexAssignment -> Maybe I.Index
+idx (l, T.Record r) _ = Just $ Left $ Map.findIndex l r + 1
+idx (l, t) indexAssign =
    find (\(_, idxType) -> idxType == (l, t)) (Map.toList indexAssign)
       >>= \(i, _) -> Just $ Right i
 
-compile' :: IndexAssignment -> TypeAssignment -> E.Expression -> I.Expression
-compile' indexAssign typeAssign = comp
-  where
-   -- Variable
-   comp (E.Variable x typeInstances)
-      | null typeInstances =
-         I.Variable x
-      | otherwise =
-         let
-            -- Type of the variable
-            t :: T.Type
-            t = typeAssign Map.! x
-
-            -- Type substitution
-            s :: [(String, T.Type)]
-            s = zip (T.typeParameters t) typeInstances
-
-            -- Label
-            l :: String
-            l = fst $ Set.elemAt 0 $ indexSet t
-          in
-            foldl
-               ( \acc (_, s') -> case idx s' l indexAssign of
-                  Just i -> I.IndexApplication acc i
-                  Nothing -> acc
-               )
-               (I.Variable x)
-               s
-   -- Constants
-   comp (E.Literal i) = I.Literal i
-   comp (E.String s) = I.String s
-   -- Abstraction
-   comp (E.Abstraction x t e) =
-      let typeAssign' = Map.insert x t typeAssign
-       in I.Abstraction x (compile' indexAssign typeAssign' e)
-   -- Application
-   comp (E.Application e1 e2) = I.Application (comp e1) (comp e2)
-   -- Record
-   comp (E.ERecord r) = I.Record (fmap comp r)
-   -- Dot
-   comp (E.Dot e t l) =
-      let c = comp e
-          index = case idx t l indexAssign of
-            Just i -> i
-            Nothing ->
-               error
-                  $ "Label \""
-                  ++ l
-                  ++ "\" not found in "
-                  ++ show t
-       in I.IndexExpression c index
-   -- Modify
-   comp (E.Modify e1 t l e2) =
-      let c1 = comp e1
-          c2 = comp e2
-          index = case idx t l indexAssign of
-            Just i -> i
-            Nothing -> error $ "Label \"" ++ l ++ "\" not found in " ++ show t
-       in I.Modify c1 index c2
-   -- Generic
-   comp (E.Poly e t) =
+compile' :: E.Expression -> State CompilationState I.Expression
+-- Variable
+compile' (E.Variable x t)
+   | null t = return $ I.Variable x
+   | otherwise = do
+      (indexAssign, typeAssign) <- get
       let
-         idxSet :: Set.Set (String, T.Type)
-         idxSet = indexSet t
+         t' :: T.Type
+         t' = typeAssign Map.! x
 
-         freshIndexes :: [String]
-         freshIndexes = map (\x -> "I" ++ show x) [(Map.size indexAssign + 1) .. (Set.size idxSet)]
+         s :: [(String, T.Type)]
+         s = zip (T.typeParameters t') t
 
-         freshIndexesAssign :: IndexAssignment
-         freshIndexesAssign = Map.fromList $ zip freshIndexes (Set.toList idxSet)
+         l :: String
+         l = fst $ Set.elemAt 0 $ indexSet t'
+      return
+         $ foldl
+            ( \acc (_, s') -> case idx (l, s') indexAssign of
+               Just i -> I.IndexApplication acc i
+               Nothing -> acc
+            )
+            (I.Variable x)
+            s
 
-         indexAssign' :: IndexAssignment
-         indexAssign' = indexAssign `Map.union` freshIndexesAssign
+-- Constants
+compile' (E.String s) = return $ I.String s
+compile' (E.Literal n) = return $ I.Literal n
+-- Abstraction
+compile' (E.Abstraction x t e) = do
+   (indexAssign, typeAssign) <- get
+   let typeAssign' = Map.insert x t typeAssign
+   _ <- put (indexAssign, typeAssign')
+   c <- compile' e
+   return $ I.Abstraction x c
 
-         c1 = compile' indexAssign' typeAssign e
-       in
-         foldl (flip I.IndexAbstraction) c1 freshIndexes
-   -- Let expression
-   comp (E.Let x t e1 e2) =
-      let
-         typeAssign' = Map.insert x t typeAssign
-         c1 = comp e1
-         c2 = compile' indexAssign typeAssign' e2
-       in
-         I.Let x c1 c2
+-- Application
+compile' (E.Application e1 e2) = do
+   c1 <- compile' e1
+   c2 <- compile' e2
+   return $ I.Application c1 c2
+
+-- Record
+compile' (E.ERecord r) = do
+   r' <- mapM compile' r
+   return $ I.Record r'
+
+-- Dot
+compile' (E.Dot e t l) = do
+   c <- compile' e
+   (indexAssign, _) <- get
+   let index = case idx (l, t) indexAssign of
+         Just i -> i
+         Nothing -> error $ "Label \"" ++ l ++ "\" not found in " ++ show t
+   return $ I.IndexExpression c index
+
+-- Modify
+compile' (E.Modify e1 t l e2) = do
+   c1 <- compile' e1
+   c2 <- compile' e2
+   (indexAssign, _) <- get
+   let index = case idx (l, t) indexAssign of
+         Just i -> i
+         Nothing -> error $ "Label \"" ++ l ++ "\" not found in " ++ show t
+   return $ I.Modify c1 index c2
+
+-- Generic
+compile' (E.Poly e t) = do
+   (indexAssign, typeAssign) <- get
+   let idxSet = indexSet t
+       lastIndex = Map.size indexAssign
+       freshIndexes = map (\x -> "I" ++ show x) [lastIndex + 1 .. lastIndex + Set.size idxSet]
+       freshIndexesAssign = Map.fromList $ zip freshIndexes (Set.toList idxSet)
+       indexAssign' = indexAssign `Map.union` freshIndexesAssign
+   _ <- put (indexAssign', typeAssign)
+   c <- compile' e
+   return $ foldl (flip I.IndexAbstraction) c freshIndexes
+
+-- Let expression
+compile' (E.Let x t e1 e2) = do
+   (indexAssign, typeAssign) <- get
+   let typeAssign' = Map.insert x t typeAssign
+   _ <- put (indexAssign, typeAssign')
+   c1 <- compile' e1
+   c2 <- compile' e2
+   return $ I.Let x c1 c2
 
 compile :: String -> I.Expression
-compile = compile' Map.empty Map.empty . parseExpression
+compile s = evalState (compile' expression) startState
+  where
+   startState = (Map.empty, Map.empty)
+   expression = parseExpression s

@@ -52,6 +52,19 @@ testCompilation =
                             ++ "in ((name String { Name: String, Office: Int })) { Name: \"Joe\", Office: 443 }"
                     )
                 )
+        , TestCase
+            $ assertEqual
+                "Poly application"
+                ( I.Application
+                    (I.IndexAbstraction "I1" (I.Abstraction "x" (I.IndexExpression (I.Variable "x") (Right "I1"))))
+                    (I.IndexAbstraction "I2" (I.Abstraction "y" (I.IndexExpression (I.Variable "y") (Right "I2"))))
+                )
+                ( compile
+                    ( let e1 = "Poly(λx: Int -> (x : t1).a): ∀t1::{{ a: Int }}.(t1 -> Int)"
+                          e2 = "Poly(λy: Int -> (y : t2).b): ∀t2::{{ b: Int }}.(t2 -> Int)"
+                       in "(" ++ e1 ++ ")" ++ e2
+                    )
+                )
         ]
 
 tests :: Test

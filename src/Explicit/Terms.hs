@@ -4,6 +4,8 @@ import Data.List (intercalate)
 import Data.Map.Ordered qualified as Map
 import Explicit.Types qualified as T
 
+type Label = String
+
 data Expression
     = Literal Int
     | String String
@@ -12,9 +14,11 @@ data Expression
     | Application Expression Expression
     | Poly Expression T.Type
     | Let String T.Type Expression Expression
-    | ERecord (Map.OMap String Expression)
-    | Dot Expression T.Type String
-    | Modify Expression T.Type String Expression
+    | ERecord (Map.OMap Label Expression)
+    | Dot Expression T.Type Label
+    | Modify Expression T.Type Label Expression
+    | Contraction Expression Label T.Type
+    | Extend Expression T.Type Label Expression
     deriving (Eq)
 
 instance Show Expression where
@@ -28,3 +32,6 @@ instance Show Expression where
     show (ERecord m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }"
     show (Dot e t x) = "(" ++ show e ++ " : " ++ show t ++ ")." ++ x
     show (Modify e1 t l e2) = "modify(" ++ show e1 ++ " : " ++ show t ++ ", " ++ l ++ ", " ++ show e2 ++ ")"
+    show (Contraction e l t) = show e ++ " \\ " ++ l ++ " : " ++ show t 
+    show (Extend e1 t l e2) = "extend(" ++ show e1 ++ " : " ++ show t ++ ", " ++ l ++ ", " ++ show e2 ++ ")"
+

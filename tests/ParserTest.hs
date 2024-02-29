@@ -48,6 +48,25 @@ testParser =
                 (parseExpression "modify({ Name: \"Joe\"} : { Name: String }, Name, \"Hanako\")")
         , TestCase
             $ assertEqual
+                "Contraction"
+                ( Contraction
+                    (ERecord (OMap.singleton ("Name", String "Joe")))
+                    "Name"
+                    T.String
+                )
+                (parseExpression "({ Name: \"Joe\" } \\\\ Name) : String")
+        , TestCase 
+            $ assertEqual
+                "Extension"
+                ( Extend
+                    (ERecord (OMap.singleton ("Name", String "Joe")))
+                    (T.Record (Map.singleton "Name" T.String))
+                    "Office"
+                    (Literal 433)
+                )
+                (parseExpression "extend({ Name: \"Joe\"} : { Name: String }, Office, 433)")
+        , TestCase
+            $ assertEqual
                 "Application"
                 ( Application (Variable "x" []) (Variable "y" [])
                 )

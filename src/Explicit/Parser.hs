@@ -18,7 +18,7 @@ lexer :: Token.TokenParser ()
 lexer =
     Token.makeTokenParser
         emptyDef
-            { Token.reservedOpNames = ["λ", "\\", ".", "->", ":"]
+            { Token.reservedOpNames = ["λ", "\\", ".", "->", ":", "\\\\"]
             , Token.reservedNames = []
             }
 
@@ -89,6 +89,29 @@ modify = do
     e2 <- term
     _ <- Token.reservedOp lexer ")"
     return $ Modify e1 t l e2
+
+contraction :: Parser Expression
+contraction = do
+    _ <- Token.reservedOp lexer "("
+    e <- term
+    _ <- Token.reservedOp lexer "\\\\"
+    l <- identifier
+    _ <- Token.reservedOp lexer ")"
+    _ <- Token.reservedOp lexer ":"
+    Contraction e l <$> typeAnnotation
+
+extend :: Parser Expression
+extend = do
+    _ <- Token.reserved lexer "extend("
+    e1 <- term
+    _ <- Token.reservedOp lexer ":"
+    t <- typeAnnotation
+    _ <- Token.reservedOp lexer ","
+    l <- identifier
+    _ <- Token.reservedOp lexer ","
+    e2 <- term
+    _ <- Token.reservedOp lexer ")"
+    return $ Extend e1 t l e2
 
 recordKind :: Parser T.Kind
 recordKind = do
@@ -185,9 +208,11 @@ lambda = do
 term :: Parser Expression
 term =
     lambda
+        <|> try contraction
         <|> letExpression
         <|> poly
         <|> record
+        <|> extend
         <|> modify
         <|> try dotExpression
         <|> try variableInstantiation

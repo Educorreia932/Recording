@@ -1,7 +1,7 @@
 module Explicit.Terms where
 
 import Data.List (intercalate)
-import Data.Map.Ordered qualified as Map
+import Data.Map qualified as Map
 import Explicit.Types qualified as T
 
 type Label = String
@@ -14,7 +14,7 @@ data Expression
     | Application Expression Expression
     | Poly Expression T.Type
     | Let String T.Type Expression Expression
-    | ERecord (Map.OMap Label Expression)
+    | Record (Map.Map Label Expression)
     | Dot Expression T.Type Label
     | Modify Expression T.Type Label Expression
     | Contraction Expression Label T.Type
@@ -29,7 +29,7 @@ instance Show Expression where
     show (Application e1 e2) = "(" ++ show e1 ++ ") " ++ show e2
     show (Poly e t) = "Poly(" ++ show e ++ "): " ++ show t
     show (Let x t e1 e2) = "let " ++ x ++ " : " ++ show t ++ " = " ++ show e1 ++ " in " ++ show e2
-    show (ERecord m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }"
+    show (Record m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }"
     show (Dot e t x) = "(" ++ show e ++ " : " ++ show t ++ ")." ++ x
     show (Modify e1 t l e2) = "modify(" ++ show e1 ++ " : " ++ show t ++ ", " ++ l ++ ", " ++ show e2 ++ ")"
     show (Contraction e l t) = show e ++ " \\ " ++ l ++ " : " ++ show t 

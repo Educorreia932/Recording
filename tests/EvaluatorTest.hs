@@ -3,7 +3,7 @@ module EvaluatorTest where
 import System.Exit qualified as Exit
 import Test.HUnit (Test (TestCase, TestList), assertEqual)
 
-import Data.Map.Ordered qualified as OMap
+import Data.Map qualified as Map
 import Explicit.Parser
 import Implementation.Evaluator
 import Implementation.Terms
@@ -59,7 +59,7 @@ testEvaluate =
         , TestCase
             $ assertEqual
                 "Modification"
-                (Record (OMap.singleton ("Name", String "Hanako")))
+                (Record [String "Hanako"])
                 (evaluate "modify({ Name: \"Joe\"} : { Name: String }, Name, \"Hanako\")")
         , TestCase
             $ assertEqual

@@ -5,7 +5,6 @@ import Explicit.Types qualified as T
 
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
-import Data.Map.Ordered qualified as OMap
 import Text.Parsec (alphaNum, many, parse, (<|>))
 import Text.Parsec.Char (letter, spaces)
 import Text.Parsec.Combinator (eof, many1, sepBy)
@@ -57,9 +56,9 @@ variableInstantiation = do
 record :: Parser Expression
 record = do
     _ <- Token.reservedOp lexer "{"
-    fields <- OMap.fromList <$> (field `sepBy` Token.comma lexer)
+    fields <- Map.fromList <$> (field `sepBy` Token.comma lexer)
     _ <- Token.reservedOp lexer "}"
-    return (ERecord fields)
+    return (Record fields)
   where
     field = do
         k <- identifier

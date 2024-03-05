@@ -4,7 +4,6 @@ import System.Exit qualified as Exit
 import Test.HUnit
 
 import Data.Map qualified as Map
-import Data.Map.Ordered qualified as OMap
 import Explicit.Parser
 import Explicit.Terms
 import Explicit.Types qualified as T
@@ -25,13 +24,13 @@ testParser =
         , TestCase
             $ assertEqual
                 "Record"
-                (ERecord (OMap.fromList [("Name", String "Joe"), ("Office", Literal 433)]))
+                (Record (Map.fromList [("Name", String "Joe"), ("Office", Literal 433)]))
                 (parseExpression "{ Name: \"Joe\", Office: 433 }")
         , TestCase
             $ assertEqual
                 "Field access"
                 ( Dot
-                    (ERecord (OMap.fromList [("Name", String "Joe"), ("Office", Literal 433)]))
+                    (Record (Map.fromList [("Name", String "Joe"), ("Office", Literal 433)]))
                     (T.Record (Map.fromList [("Name", T.String), ("Office", T.Int)]))
                     "Name"
                 )
@@ -40,7 +39,7 @@ testParser =
             $ assertEqual
                 "Application"
                 ( Modify
-                    (ERecord (OMap.singleton ("Name", String "Joe")))
+                    (Record (Map.singleton "Name" (String "Joe")))
                     (T.Record (Map.singleton "Name" T.String))
                     "Name"
                     (String "Hanako")
@@ -50,7 +49,7 @@ testParser =
             $ assertEqual
                 "Contraction"
                 ( Contraction
-                    (ERecord (OMap.singleton ("Name", String "Joe")))
+                    (Record (Map.singleton "Name" (String "Joe")))
                     "Name"
                     T.String
                 )
@@ -59,7 +58,7 @@ testParser =
             $ assertEqual
                 "Extension"
                 ( Extend
-                    (ERecord (OMap.singleton ("Name", String "Joe")))
+                    (Record (Map.singleton "Name" (String "Joe")))
                     (T.Record (Map.singleton "Name" T.String))
                     "Office"
                     (Literal 433)

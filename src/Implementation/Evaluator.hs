@@ -1,6 +1,7 @@
 module Implementation.Evaluator where
 
-import Data.Map.Ordered qualified as OMap
+import Data.Foldable (toList)
+import Data.Sequence qualified as Seq
 import Implementation.Compilation
 import Implementation.Terms
 
@@ -64,11 +65,7 @@ evaluate' :: Expression -> Expression
 -- Modify
 evaluate' (Modify (Record r) i e) =
     case i of
-        Left i' ->
-            let (k, _) = case OMap.elemAt r (i' - 1) of
-                    Just x -> x
-                    Nothing -> error "Index out of bounds"
-             in Record $ OMap.alter (\_ -> Just e) k r
+        Left i' -> Record $ toList $ Seq.update (i' - 1) e $ Seq.fromList r
         Right _ -> error "Not implemented"
 -- Let expression
 evaluate' (Let var e1 e2) = evaluate' $ substitute var e1 e2
@@ -76,9 +73,7 @@ evaluate' (Let var e1 e2) = evaluate' $ substitute var e1 e2
 evaluate' (IndexExpression e i) =
     case i of
         Left i' -> case e of
-            Record m -> case OMap.elemAt m (i' - 1) of
-                Just (_, e') -> e'
-                Nothing -> error "Index out of bounds"
+            Record m -> m !! (i' - 1)
             _ -> error "Indexing non-record"
         _ -> error "Invalid index"
 -- Application

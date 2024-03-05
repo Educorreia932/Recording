@@ -78,9 +78,9 @@ compile' (E.Application e1 e2) = do
    return $ I.Application c1 c2
 
 -- Record
-compile' (E.ERecord r) = do
-   r' <- mapM compile' r
-   return $ I.Record r'
+compile' (E.Record r) = do
+   r' <- Map.elems <$> mapM compile' r -- Map.elems returns sorted by labels
+   return $ I.Record r' 
 
 -- Dot
 compile' (E.Dot e t l) = do

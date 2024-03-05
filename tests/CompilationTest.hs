@@ -1,7 +1,6 @@
 module CompilationTest where
 
 import Data.Map qualified as Map
-import Data.Map.Ordered qualified as OMap
 import Explicit.Parser
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
@@ -16,10 +15,10 @@ testCompilation =
             $ assertEqual
                 "Field access"
                 ( I.IndexExpression
-                    (I.Record (OMap.fromList [("Name", I.String "Joe"), ("Office", I.Literal 433)]))
+                    (I.Record [I.String "Joe", I.Literal 433])
                     (Left 2)
                 )
-                (compile "({ Name: \"Joe\", Office: 433 } : { Name: String, Office: Int }).Office")
+                (compile "({ Office: 433, Name: \"Joe\" } : { Office: Int, Name: String }).Office")
         , TestCase
             $ assertEqual
                 "Polymorphic field access"
@@ -40,7 +39,7 @@ testCompilation =
                     )
                     ( I.Application
                         (I.IndexApplication (I.Variable "name") (Left 1))
-                        (I.Record (OMap.fromList [("Name", I.String "Joe"), ("Office", I.Literal 443)]))
+                        (I.Record [I.String "Joe", I.Literal 443])
                     )
                 )
                 ( compile
@@ -65,6 +64,22 @@ testCompilation =
                        in "(" ++ e1 ++ ")" ++ e2
                     )
                 )
+        , TestCase
+            $ assertEqual
+                "Contraction"
+                ( I.Contraction
+                    (I.Record [I.String "Joe", I.Literal 433])
+                    (Left 1)
+                )
+                (compile "({ Name: \"Joe\", Office: 433 } \\\\ Name) : { Name: String, Office: Int }")
+        , TestCase
+            $ assertEqual
+                "Extend"
+                ( I.Extend
+                    (I.Record [I.String "Joe"])
+                    (I.Literal 443)
+                )
+                (compile "extend({ Name: \"Joe\"} : { Name: String }, Office, 433)")
         ]
 
 tests :: Test

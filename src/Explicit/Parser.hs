@@ -13,11 +13,13 @@ import Text.Parsec.String (Parser)
 import Text.Parsec.Token qualified as Token
 import Text.ParserCombinators.Parsec (try)
 
+data TypeModification = Extension | Contraction deriving (Enum)
+
 lexer :: Token.TokenParser ()
 lexer =
     Token.makeTokenParser
         emptyDef
-            { Token.reservedOpNames = ["λ", "\\", ".", "->", ":", "\\\\"]
+            { Token.reservedOpNames = ["λ", "\\", ".", "->", ":", "\\\\", "-", "+"]
             , Token.reservedNames = []
             }
 
@@ -27,7 +29,7 @@ lexeme parser = parser <* spaces
 identifier :: Parser String
 identifier = lexeme $ do
     first <- letter
-    rest <- many alphaNum
+    rest <- many $ alphaNum
     return (first : rest)
 
 parentheses :: Parser a -> Parser a
@@ -80,50 +82,51 @@ modify :: Parser Expression
 modify = do
     _ <- Token.reserved lexer "modify("
     e1 <- term
-    _ <- Token.reservedOp lexer ":"
+    _ <- Token.reserved lexer ":"
     t <- typeAnnotation
-    _ <- Token.reservedOp lexer ","
+    _ <- Token.reserved lexer ","
     l <- identifier
-    _ <- Token.reservedOp lexer ","
+    _ <- Token.reserved lexer ","
     e2 <- term
-    _ <- Token.reservedOp lexer ")"
+    _ <- Token.reserved lexer ")"
     return $ Modify e1 t l e2
 
 contraction :: Parser Expression
-contraction = do
-    _ <- Token.reservedOp lexer "("
+contraction = parentheses $ do
     e <- term
-    _ <- Token.reservedOp lexer "\\\\"
-    l <- identifier
-    _ <- Token.reservedOp lexer ")"
     _ <- Token.reservedOp lexer ":"
-    Contraction e l <$> typeAnnotation
+    t <- typeAnnotation
+    _ <- Token.reservedOp lexer "\\\\"
+    Contract e t <$> identifier
 
 extend :: Parser Expression
 extend = do
-    _ <- Token.reserved lexer "extend("
+    _ <- Token.reservedOp lexer "extend("
     e1 <- term
-    _ <- Token.reservedOp lexer ":"
+    _ <- Token.reserved lexer ":"
     t <- typeAnnotation
-    _ <- Token.reservedOp lexer ","
+    _ <- Token.reserved lexer ","
     l <- identifier
-    _ <- Token.reservedOp lexer ","
+    _ <- Token.reserved lexer ","
     e2 <- term
-    _ <- Token.reservedOp lexer ")"
+    _ <- Token.reserved lexer ")"
     return $ Extend e1 t l e2
 
 recordKind :: Parser T.Kind
 recordKind = do
     _ <- Token.reserved lexer "{{"
-    fields <- Map.fromList <$> (field `sepBy` Token.comma lexer)
+    positiveFields <- fields
+    _ <- Token.reserved lexer "||"
+    negativeFields <- fields
     _ <- Token.reserved lexer "}}"
-    return (T.RecordKind fields)
+    return (T.RecordKind positiveFields negativeFields)
   where
     field = do
         k <- identifier
         _ <- Token.reservedOp lexer ":"
         t <- typeAnnotation
         return (k, t)
+    fields = Map.fromList <$> (field `sepBy` Token.comma lexer)
 
 universalKind :: Parser T.Kind
 universalKind = Token.reserved lexer "U" >> pure T.Universal
@@ -140,6 +143,25 @@ intType = Token.reserved lexer "Int" >> pure T.Int
 typeParameter :: Parser T.Type
 typeParameter = T.Parameter <$> identifier
 
+typeModification :: TypeModification -> Parser T.Type
+typeModification x = do
+    t1 <- recordType <|> typeParameter <|> typeExtension <|> typeContraction
+    _ <- Token.reservedOp lexer $ case x of
+        Extension -> "+"
+        Contraction -> "-"
+    _ <- Token.reservedOp lexer "{"
+    l <- identifier
+    _ <- Token.reservedOp lexer ":"
+    t2 <- typeAnnotation
+    _ <- Token.reservedOp lexer "}"
+    return $ T.Contraction t1 l t2 
+
+typeExtension :: Parser T.Type
+typeExtension = parentheses $ typeModification Extension
+
+typeContraction :: Parser T.Type
+typeContraction = parentheses $ typeModification Contraction
+
 recordType :: Parser T.Type
 recordType = do
     _ <- Token.reservedOp lexer "{"
@@ -154,7 +176,7 @@ recordType = do
         return (k, t)
 
 arrowType :: Parser T.Type
-arrowType = do
+arrowType = parentheses $ do
     t1 <- typeAnnotation
     _ <- Token.reservedOp lexer "->"
     T.Arrow t1 <$> typeAnnotation
@@ -171,7 +193,9 @@ forAll = do
 typeAnnotation :: Parser T.Type
 typeAnnotation =
     forAll
-        <|> parentheses arrowType
+        <|> try arrowType
+        <|> try typeExtension
+        <|> try typeContraction
         <|> recordType
         <|> stringType
         <|> intType
@@ -181,7 +205,7 @@ poly :: Parser Expression
 poly = do
     _ <- Token.reserved lexer "Poly"
     e <- parentheses term
-    _ <- Token.reservedOp lexer ":"
+    _ <- Token.reserved lexer ":"
     Poly e <$> typeAnnotation
 
 letExpression :: Parser Expression
@@ -199,7 +223,7 @@ lambda :: Parser Expression
 lambda = do
     _ <- Token.reservedOp lexer "λ" <|> Token.reservedOp lexer "\\"
     x <- identifier
-    _ <- Token.reservedOp lexer ":"
+    _ <- Token.reserved lexer ":"
     t <- typeAnnotation
     _ <- Token.reservedOp lexer "->"
     Abstraction x t <$> term
@@ -209,8 +233,8 @@ term =
     lambda
         <|> try contraction
         <|> letExpression
-        <|> poly
         <|> record
+        <|> poly
         <|> extend
         <|> modify
         <|> try dotExpression

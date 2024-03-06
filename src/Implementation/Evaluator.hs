@@ -5,6 +5,11 @@ import Data.Sequence qualified as Seq
 import Implementation.Compilation
 import Implementation.Terms
 
+remove :: Int -> [a] -> [a]
+remove _ [] = []
+remove 0 (_ : xs) = xs
+remove n (x : xs) = x : remove (n - 1) xs
+
 freeVariables :: Expression -> [String]
 freeVariables (Literal _) = []
 freeVariables (String _) = []
@@ -21,6 +26,7 @@ freeVariables _ = []
 disambiguate :: String -> String
 disambiguate x = x ++ "'"
 
+-- Replace var with e1 in e2
 substitute :: String -> Expression -> Expression -> Expression
 substitute var e = sub
   where
@@ -60,13 +66,36 @@ substitute var e = sub
     sub (Record m) = Record $ fmap sub m
     sub (Modify r i e') = Modify (sub r) i (sub e')
     sub (Let v e1 e2) = Let v (sub e1) (sub e2)
+    sub (Contraction e' i) = case i of
+        Left _ -> Contraction (sub e') i
+        Right i' -> case e of
+            Literal n
+                | var == i' -> Contraction (sub e') (Left n)
+                | otherwise -> Contraction (sub e') i
+            String s
+                | var == i' -> Contraction (sub e') (Right s)
+                | otherwise -> Contraction (sub e') i
+            _ -> Contraction (sub e') i
+    sub (Extend e1 e2) = Extend (sub e1) (sub e2)
 
 evaluate' :: Expression -> Expression
+-- Constants
+evaluate' (Literal n) = Literal n
+evaluate' (String s) = String s
+-- Variable
+evaluate' (Variable v) = Variable v
+-- Abstraction
+evaluate' (Abstraction v e) = Abstraction v e
+-- Record
+evaluate' (Record m) = Record $ fmap evaluate' m
+-- Index Abstraction
+evaluate' (IndexAbstraction i e) = IndexAbstraction i e
 -- Modify
 evaluate' (Modify (Record r) i e) =
     case i of
         Left i' -> Record $ toList $ Seq.update (i' - 1) e $ Seq.fromList r
         Right _ -> error "Not implemented"
+evaluate' (Modify{}) = error "Modifying non-record"
 -- Let expression
 evaluate' (Let var e1 e2) = evaluate' $ substitute var e1 e2
 -- Index expression
@@ -83,16 +112,27 @@ evaluate' (Application fun arg) = case evaluate' fun of
 -- Index application
 evaluate' (IndexApplication fun index) = case evaluate' fun of
     IndexAbstraction i body ->
-        evaluate'
-            $ substitute
-                i
-                ( case index of
-                    Left index' -> Literal index'
-                    Right index' -> String index'
-                )
-                body
+        let s =
+                substitute
+                    i
+                    ( case index of
+                        Left index' -> Literal index'
+                        Right index' -> String index'
+                    )
+                    body
+         in evaluate' s
     other -> IndexApplication other index
-evaluate' e = e
+-- Contraction
+evaluate' (Contraction e i) = 
+    case i of
+        Left i' -> case evaluate' e of
+            Record r -> Record $ remove (i' - 1) r
+            _ -> error "Indexing non-record"
+        _ -> error "Invalid index"
+-- Extend
+evaluate' (Extend e1 e2) = case evaluate' e1 of
+    Record r -> Record $ r ++ [e2]
+    _ -> error "Extend non-record"
 
 evaluate :: String -> Expression
 evaluate = evaluate' . compile

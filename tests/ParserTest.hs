@@ -1,6 +1,5 @@
 module ParserTest where
 
-import System.Exit qualified as Exit
 import Test.HUnit
 
 import Data.Map qualified as Map
@@ -48,13 +47,13 @@ testParser =
         , TestCase
             $ assertEqual
                 "Contraction"
-                ( Contraction
+                ( Contract
                     (Record (Map.singleton "Name" (String "Joe")))
+                    (T.Record (Map.singleton "Name" T.String))
                     "Name"
-                    T.String
                 )
-                (parseExpression "({ Name: \"Joe\" } \\\\ Name) : String")
-        , TestCase 
+                (parseExpression "({ Name: \"Joe\" } : { Name: String } \\\\ Name)")
+        , TestCase
             $ assertEqual
                 "Extension"
                 ( Extend
@@ -85,12 +84,12 @@ testParser =
                 ( Abstraction
                     "x"
                     ( T.ForAll
-                        ("t", (T.RecordKind (Map.singleton "Name" T.String)))
+                        ("t", T.RecordKind (Map.singleton "Name" T.String) Map.empty)
                         (T.Parameter "t" `T.Arrow` T.Parameter "t")
                     )
                     (Variable "x" [])
                 )
-                (parseExpression "λx : ∀t::{{ Name: String }}.(t -> t) -> x")
+                (parseExpression "λx : ∀t::{{ Name: String || }}.(t -> t) -> x")
         , TestCase
             $ assertEqual
                 "Polymorphic field access"
@@ -107,12 +106,12 @@ testParser =
                     ( T.ForAll
                         ("t1", T.Universal)
                         ( T.ForAll
-                            ("t2", T.RecordKind (Map.singleton "Name" T.String))
+                            ("t2", T.RecordKind (Map.singleton "Name" T.String) Map.empty)
                             (T.Parameter "t1" `T.Arrow` T.Parameter "t2")
                         )
                     )
                 )
-                (parseExpression "Poly(λx : t2 -> (x : t2).Name): ∀t1::U.∀t2::{{ Name: String }}.(t1 -> t2)")
+                (parseExpression "Poly(λx : t2 -> (x : t2).Name): ∀t1::U.∀t2::{{ Name: String || }}.(t1 -> t2)")
         , TestCase
             $ assertEqual
                 "Let expression"

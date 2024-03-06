@@ -34,5 +34,5 @@ instance Show Expression where
     show (IndexAbstraction i e) = "λ" ++ i ++ " -> " ++ show e
     show (IndexApplication e i) = "(" ++ show e ++ ") " ++ either show show i
     show (Modify e1 i e2) = "modify(" ++ show e1 ++ ", " ++ show i ++ ", " ++ show e2 ++ ")"
-    show (Contraction e i) = show e ++ " \\ " ++ either show id i
+    show (Contraction e i) = show e ++ " \\\\ " ++ either show id i
     show (Extend e1 e2) = "extend(" ++ show e1 ++ ", " ++ show e2 ++ ")"

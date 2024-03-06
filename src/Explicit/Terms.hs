@@ -17,7 +17,7 @@ data Expression
     | Record (Map.Map Label Expression)
     | Dot Expression T.Type Label
     | Modify Expression T.Type Label Expression
-    | Contraction Expression Label T.Type
+    | Contract Expression T.Type Label
     | Extend Expression T.Type Label Expression
     deriving (Eq)
 
@@ -32,6 +32,5 @@ instance Show Expression where
     show (Record m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }"
     show (Dot e t x) = "(" ++ show e ++ " : " ++ show t ++ ")." ++ x
     show (Modify e1 t l e2) = "modify(" ++ show e1 ++ " : " ++ show t ++ ", " ++ l ++ ", " ++ show e2 ++ ")"
-    show (Contraction e l t) = show e ++ " \\ " ++ l ++ " : " ++ show t 
+    show (Contract e t l) = show e ++ " \\ " ++ l ++ " : " ++ show t
     show (Extend e1 t l e2) = "extend(" ++ show e1 ++ " : " ++ show t ++ ", " ++ l ++ ", " ++ show e2 ++ ")"
-

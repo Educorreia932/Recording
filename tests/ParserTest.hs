@@ -1,6 +1,5 @@
 module ParserTest where
 
-import System.Exit qualified as Exit
 import Test.HUnit
 
 import Data.Map qualified as Map
@@ -67,7 +66,7 @@ testParser =
                 ( Abstraction
                     "x"
                     ( T.ForAll
-                        ("t", (T.RecordKind (Map.singleton "Name" T.String)))
+                        ("t", T.RecordKind (Map.singleton "Name" T.String))
                         (T.Parameter "t" `T.Arrow` T.Parameter "t")
                     )
                     (Variable "x" [])

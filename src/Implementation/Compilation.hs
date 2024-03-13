@@ -111,7 +111,7 @@ compile' (E.Poly e t) = do
        indexAssign' = indexAssign `Map.union` freshIndexesAssign
    _ <- put (indexAssign', typeAssign)
    c <- compile' e
-   return $ foldl (flip I.IndexAbstraction) c freshIndexes
+   return $ foldl (flip I.IndexAbstraction) c (reverse freshIndexes)
 
 -- Let expression
 compile' (E.Let x t e1 e2) = do

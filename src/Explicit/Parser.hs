@@ -154,7 +154,10 @@ typeModification x = do
     _ <- Token.reservedOp lexer ":"
     t2 <- typeAnnotation
     _ <- Token.reservedOp lexer "}"
-    return $ T.Contraction t1 l t2 
+    let t = case x of
+            Extension -> T.Extension
+            Contraction -> T.Contraction
+    return $ t t1 l t2
 
 typeExtension :: Parser T.Type
 typeExtension = parentheses $ typeModification Extension

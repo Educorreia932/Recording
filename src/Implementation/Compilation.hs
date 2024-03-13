@@ -14,19 +14,19 @@ type IndexAssignment = Map.Map String IndexType
 type TypeAssignment = Map.Map String T.Type
 
 class Indexable a where
-   indexSet :: a -> Set.Set IndexType
+   indexSet :: a -> [IndexType]
 
 instance Indexable T.KindedType where
-   indexSet (_, T.Universal) = Set.empty
-   indexSet (t, T.RecordKind m) = Set.fromList $ map (\(l, _) -> (l, T.Parameter t)) (Map.toList m)
+   indexSet (_, T.Universal) = []
+   indexSet (t, T.RecordKind m1) = map (\(l, _) -> (l, T.Parameter t)) (Map.toList m1)
 
 instance Indexable T.Type where
-   indexSet (T.ForAll (t, k) s) = indexSet (t, k) `Set.union` indexSet s
-   indexSet _ = Set.empty
+   indexSet (T.ForAll (t, k) s) = indexSet (t, k) ++ indexSet s
+   indexSet _ = []
 
 instance Indexable T.Kind where
-   indexSet T.Universal = Set.empty
-   indexSet (T.RecordKind m) = Set.fromList $ Map.toList m
+   indexSet T.Universal = []
+   indexSet (T.RecordKind m1) = Map.toList m1
 
 type CompilationState = (IndexAssignment, TypeAssignment)
 
@@ -106,8 +106,8 @@ compile' (E.Poly e t) = do
    (indexAssign, typeAssign) <- get
    let idxSet = indexSet t
        lastIndex = Map.size indexAssign
-       freshIndexes = map (\x -> "I" ++ show x) [lastIndex + 1 .. lastIndex + Set.size idxSet]
-       freshIndexesAssign = Map.fromList $ zip freshIndexes (Set.toList idxSet)
+       freshIndexes = map (\x -> "I" ++ show x) [lastIndex + 1 .. lastIndex + length idxSet]
+       freshIndexesAssign = Map.fromList $ zip freshIndexes idxSet
        indexAssign' = indexAssign `Map.union` freshIndexesAssign
    _ <- put (indexAssign', typeAssign)
    c <- compile' e

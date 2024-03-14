@@ -77,6 +77,7 @@ testCompilation =
                 "Extend"
                 ( I.Extend
                     (I.Record [I.String "Joe"])
+                    (Left 2)
                     (I.Literal 443)
                 )
                 (compile "extend({ Name: \"Joe\"} : { Name: String }, Office, 443)")

@@ -18,7 +18,7 @@ data Expression
     | IndexApplication Expression Index
     | Modify Expression Index Expression
     | Contraction Expression Index
-    | Extend Expression Expression
+    | Extend Expression Index Expression
     deriving (Eq)
 
 showIndex :: Index -> String
@@ -40,6 +40,6 @@ instance Show Expression where
     show (IndexExpression e i) = show e ++ "[" ++ showIndex i ++ "]"
     show (IndexAbstraction i e) = "λ" ++ i ++ " -> " ++ show e
     show (IndexApplication e i) = "(" ++ show e ++ " " ++ showIndex i ++ ")"
-    show (Modify e1 i e2) = "modify(" ++ show e1 ++ ", " ++ show i ++ ", " ++ show e2 ++ ")"
+    show (Modify e1 i e2) = "modify(" ++ show e1 ++ ", " ++ showIndex i ++ ", " ++ show e2 ++ ")"
     show (Contraction e i) = show e ++ " \\\\ " ++ showIndex i
-    show (Extend e1 e2) = "extend(" ++ show e1 ++ ", " ++ show e2 ++ ")"
+    show (Extend e1 i e2) = "extend(" ++ show e1 ++ ", " ++ showIndex i ++ ", " ++ show e2 ++ ")"

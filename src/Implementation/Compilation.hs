@@ -19,7 +19,7 @@ class Indexable a where
 
 instance Indexable T.KindedType where
    indexSet (_, T.Universal) = []
-   indexSet (t, T.RecordKind m1 _) = map (\(l, _) -> (l, T.Parameter t)) (Map.toList m1)
+   indexSet (t, T.RecordKind m1 m2) = map (\(l, _) -> (l, T.Parameter t)) (Map.toList m1 ++ Map.toList m2)
 
 instance Indexable T.Type where
    indexSet (T.ForAll (t, k) s) = indexSet (t, k) ++ indexSet s
@@ -45,8 +45,15 @@ baseType (T.Extension t _ _) = baseType t
 baseType (T.Contraction t _ _) = baseType t
 baseType t = t
 
+insertionIndex :: [String] -> String -> Int
+insertionIndex [] _ = 0
+insertionIndex (x : xs) l
+   | l > x = 1 + insertionIndex xs l
+   | otherwise = 0
+
+-- Finds the index of a label in an index assignment
 idx :: IndexType -> IndexAssignment -> Maybe I.Index
-idx (l, T.Record r) _ = Just $ Left $ Map.findIndex l r + 1
+idx (l, T.Record r) _ = Just $ Left $ insertionIndex (Map.keys r) l + 1
 idx (l, t) indexAssign =
    let offset = indexOffset l t
     in find (\(_, idxType) -> idxType == (l, baseType t)) (Map.toList indexAssign)
@@ -145,10 +152,14 @@ compile' (E.Contract e t l) = do
    return $ I.Contraction c index
 
 -- Extend
-compile' (E.Extend e1 _ _ e2) = do
+compile' (E.Extend e1 t l e2) = do
    c1 <- compile' e1
    c2 <- compile' e2
-   return $ I.Extend c1 c2
+   (indexAssign, _) <- get
+   let index = case idx (l, t) indexAssign of
+         Just i -> i
+         Nothing -> error $ "Label \"" ++ l ++ "\" not found in " ++ show t
+   return $ I.Extend c1 index c2
 
 compile :: String -> I.Expression
 compile s = evalState (compile' expression) startState

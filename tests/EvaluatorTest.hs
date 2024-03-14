@@ -87,7 +87,7 @@ testEvaluate =
                     ( let t = "∀t1::{{ C: Int || }}.∀t2::{{ B: t1 || }}.(t2 -> Int)"
                        in "let f: "
                             ++ t
-                            ++ "= Poly(λx: t2 -> ((x : t2).B : t1).C  ): "
+                            ++ "= Poly(λx: t2 -> ((x : t2).B : t1).C ): "
                             ++ t
                             ++ "in ((f { C: Int } { A: Int, B: { C: Int } })) { A: 1, B: { C: 2 } }"
                     )
@@ -107,17 +107,17 @@ testEvaluate =
                 "Polymorphic extension"
                 (Record [Literal 1, Literal 2])
                 ( evaluate
-                    ( let t = "∀t1::{{ || A: Int }}.(t1 -> (t1 + { A: Int }) )"
+                    ( let t = "∀t1::{{ || B: Int }}.(t1 -> (t1 + { B: Int }) )"
                        in "let f: "
                             ++ t
                             ++ "= Poly(λx: t1 -> extend( x: t1, B, 2 ) ): "
                             ++ t
-                            ++ "in (f) { A: 1}"
+                            ++ "in ((f { A: Int } )) { A: 1 }"
                     )
                 )
         , TestCase
             $ assertEqual
-                "Polymorphic extension"
+                "Polymorphic contraction"
                 (Record [Literal 2])
                 ( evaluate
                     ( let t = "∀t1::{{ A: Int || }}.(t1 -> (t1 - { A: Int }) )"
@@ -131,14 +131,14 @@ testEvaluate =
         , TestCase
             $ assertEqual
                 "Polymorphic extension and contraction"
-                (Record [Literal 2])
+                (Record [Literal 2, Literal 3])
                 ( evaluate
-                    ( let t = "∀t1::{{ A: Int || B: Int }}.(t1 -> ((t1 + { B: Int }) - { A: Int }) )"
+                    ( let t = "∀t1::{{ A: Int || C: Int }}.(t1 -> ((t1 + { C: Int }) - { A: Int }) )"
                        in "let f: "
                             ++ t
-                            ++ "= Poly(λx: t1 -> ( extend(x: t1, B, 2) : (t1 + { B: Int }) \\\\ A )): "
+                            ++ "= Poly(λx: t1 -> ( extend(x: t1, C, 2) : (t1 + { C: Int }) \\\\ A )): "
                             ++ t
-                            ++ "in ((f { A: Int })) { A: 1 }"
+                            ++ "in ((f { A: Int, C: Int })) { A: 1, B: 3 }"
                     )
                 )
         ]

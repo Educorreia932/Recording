@@ -23,8 +23,30 @@ freeVariables (IndexExpression e _) = freeVariables e
 freeVariables (IndexApplication e1 _) = freeVariables e1
 freeVariables _ = []
 
+insertAt :: Int -> [a] -> a -> [a]
+insertAt _ [] newElem = [newElem]
+insertAt pos (x : xs) newElem
+    | pos == 0 = newElem : x : xs
+    | pos > 0 = x : insertAt (pos - 1) xs newElem
+    | otherwise = x : insertAt (pos + length (x : xs)) xs newElem
+
 disambiguate :: String -> String
 disambiguate x = x ++ "'"
+
+substituteIndex :: String -> Index -> Expression -> Index
+substituteIndex var i e =
+    case i of
+        Left _ -> i
+        Right (i', offset) -> case evaluate' e of
+            -- Replace with a index literal
+            Literal n
+                | var == i' -> Left $ n + offset
+                | otherwise -> i
+            -- Replace with a index variable
+            String s
+                | var == i' -> Right (s, offset)
+                | otherwise -> i
+            _ -> i
 
 -- Replace var with e1 in e2
 substitute :: String -> Expression -> Expression -> Expression
@@ -53,30 +75,20 @@ substitute var e = sub
         | otherwise = Abstraction v $ sub body
     sub (Application e1 e2) = Application (sub e1) (sub e2)
     sub (IndexApplication e1 e2) = IndexApplication (sub e1) e2
-    sub (IndexExpression e' i) = case i of
-        Left _ -> IndexExpression (sub e') i
-        Right i' -> case evaluate' e of
-            Literal n
-                | var == fst i' -> IndexExpression (sub e') (Left $ n + snd i')
-                | otherwise -> IndexExpression (sub e') i
-            String s
-                | var == fst i' -> IndexExpression (sub e') (Right (s, snd i'))
-                | otherwise -> IndexExpression (sub e') i
-            _ -> IndexExpression (sub e') i
+    sub (IndexExpression e' i) = IndexExpression (sub e') (substituteIndex var i e)
     sub (Record m) = Record $ fmap sub m
-    sub (Modify r i e') = Modify (sub r) i (sub e')
+    sub (Modify r i e') =
+        Modify
+            (sub r)
+            (substituteIndex var i e)
+            (sub e')
     sub (Let v e1 e2) = Let v (sub e1) (sub e2)
-    sub (Contraction e' i) = case i of
-        Left _ -> Contraction (sub e') i
-        Right i' -> case evaluate' e of
-            Literal n
-                | var == fst i' -> Contraction (sub e') (Left $ n + snd i')
-                | otherwise -> Contraction (sub e') i
-            String s
-                | var == fst i' -> Contraction (sub e') (Right (s, snd i'))
-                | otherwise -> Contraction (sub e') i
-            _ -> Contraction (sub e') i
-    sub (Extend e1 e2) = Extend (sub e1) (sub e2)
+    sub (Contraction e' i) = Contraction (sub e') (substituteIndex var i e)
+    sub (Extend e1 i e2) =
+        Extend
+            (sub e1)
+            (substituteIndex var i e)
+            (sub e2)
 
 evaluate' :: Expression -> Expression
 -- Constants
@@ -123,16 +135,18 @@ evaluate' (IndexApplication fun index) = case evaluate' fun of
          in evaluate' s
     other -> IndexApplication other index
 -- Contraction
-evaluate' (Contraction e i) = 
+evaluate' (Contraction e i) =
     case i of
         Left i' -> case evaluate' e of
             Record r -> Record $ remove (i' - 1) r
             _ -> error "Indexing non-record"
         _ -> error "Invalid index"
 -- Extend
-evaluate' (Extend e1 e2) = case evaluate' e1 of
-    Record r -> Record $ r ++ [e2]
-    _ -> error "Extend non-record"
-
+evaluate' (Extend e1 i e2) =
+    case i of
+        Left i' -> case evaluate' e1 of
+            Record r -> Record $ insertAt (i' - 1) r e2
+            _ -> error "Extend non-record"
+        _ -> error "Invalid index"
 evaluate :: String -> Expression
 evaluate = evaluate' . compile

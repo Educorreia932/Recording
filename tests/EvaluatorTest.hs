@@ -105,13 +105,14 @@ testEvaluate =
         , TestCase
             $ assertEqual
                 "Polymorphic extension"
-                (Record [String "Joe", Literal 443])
+                (Record [Literal 1, Literal 2])
                 ( evaluate
-                    ( let t = "∀t1::{{ || Office: Int }}.(t1 -> (t1 + { Office: Int }) )"
-                       in "let addOffice: "
+                    ( let t = "∀t1::{{ || A: Int }}.(t1 -> (t1 + { A: Int }) )"
+                       in "let f: "
                             ++ t
-                            ++ "= λx: t2 -> extend( x: t1, Office, 443 ) "
-                            ++ "in (addOffice) { Name: \"Joe\" }"
+                            ++ "= Poly(λx: t1 -> extend( x: t1, B, 2 ) ): "
+                            ++ t
+                            ++ "in (f) { A: 1}"
                     )
                 )
         , TestCase
@@ -135,7 +136,7 @@ testEvaluate =
                     ( let t = "∀t1::{{ A: Int || B: Int }}.(t1 -> ((t1 + { B: Int }) - { A: Int }) )"
                        in "let f: "
                             ++ t
-                            ++ "= Poly(λx: t1 -> ( extend(x: t1, B, 2) : t1 \\\\ A )): "
+                            ++ "= Poly(λx: t1 -> ( extend(x: t1, B, 2) : (t1 + { B: Int }) \\\\ A )): "
                             ++ t
                             ++ "in ((f { A: Int })) { A: 1 }"
                     )

@@ -24,7 +24,7 @@ testCompilation =
                 "Polymorphic field access"
                 ( I.IndexAbstraction
                     "I1"
-                    (I.Abstraction "x" (I.IndexExpression (I.Variable "x") (Right "I1")))
+                    (I.Abstraction "x" (I.IndexExpression (I.Variable "x") (Right ("I1", 0))))
                 )
                 (compile "Poly(λx: t2 -> (x : t2).Name): ∀t1::U.∀t2::{{ Name: String || }}.(t2 -> t1)")
         , TestCase
@@ -34,7 +34,7 @@ testCompilation =
                     "name"
                     ( I.IndexAbstraction
                         "I1"
-                        ( I.Abstraction "x" (I.IndexExpression (I.Variable "x") (Right "I1"))
+                        ( I.Abstraction "x" (I.IndexExpression (I.Variable "x") (Right ("I1", 0)))
                         )
                     )
                     ( I.Application
@@ -55,8 +55,8 @@ testCompilation =
             $ assertEqual
                 "Poly application"
                 ( I.Application
-                    (I.IndexAbstraction "I1" (I.Abstraction "x" (I.IndexExpression (I.Variable "x") (Right "I1"))))
-                    (I.IndexAbstraction "I2" (I.Abstraction "y" (I.IndexExpression (I.Variable "y") (Right "I2"))))
+                    (I.IndexAbstraction "I1" (I.Abstraction "x" (I.IndexExpression (I.Variable "x") (Right ("I1", 0)))))
+                    (I.IndexAbstraction "I2" (I.Abstraction "y" (I.IndexExpression (I.Variable "y") (Right ("I2", 0)))))
                 )
                 ( compile
                     ( let e1 = "Poly(λx: Int -> (x : t1).a): ∀t1::{{ a: Int || }}.(t1 -> Int)"

@@ -1,6 +1,7 @@
 module Implementation.Compilation (compile) where
 
 import Control.Monad.State
+import Data.Bifunctor (second)
 import Data.List (find)
 import Data.Map qualified as Map
 import Debug.Trace
@@ -8,7 +9,6 @@ import Explicit.Parser
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
 import Implementation.Terms qualified as I
-import Data.Bifunctor (second)
 
 type IndexType = (String, T.Type)
 type IndexAssignment = Map.Map String IndexType
@@ -29,13 +29,30 @@ instance Indexable T.Kind where
    indexSet T.Universal = []
    indexSet (T.RecordKind m1 _) = Map.toList m1
 
-type CompilationState = (IndexAssignment, TypeAssignment)
+-- Calculates the offset of an index assignment for an extension/contraction type
+indexOffset :: String -> T.Type -> Int
+indexOffset l (T.Extension t1 l' _)
+   | l <= l' = 0
+   | otherwise = 1 + indexOffset l t1
+indexOffset l (T.Contraction t1 l' _)
+   | l <= l' = 0
+   | otherwise = -1 + indexOffset l t1
+indexOffset _ _ = 0
+
+-- Gets the base type for an extension/contraction type
+baseType :: T.Type -> T.Type
+baseType (T.Extension t _ _) = baseType t
+baseType (T.Contraction t _ _) = baseType t
+baseType t = t
 
 idx :: IndexType -> IndexAssignment -> Maybe I.Index
 idx (l, T.Record r) _ = Just $ Left $ Map.findIndex l r + 1
 idx (l, t) indexAssign =
-   find (\(_, idxType) -> idxType == (l, t)) (Map.toList indexAssign)
-      >>= \(i, _) -> Just $ Right i
+   let offset = indexOffset l t
+    in find (\(_, idxType) -> idxType == (l, baseType t)) (Map.toList indexAssign)
+         >>= \(i, _) -> Just $ Right (i, offset)
+
+type CompilationState = (IndexAssignment, TypeAssignment)
 
 compile' :: E.Expression -> State CompilationState I.Expression
 -- Variable

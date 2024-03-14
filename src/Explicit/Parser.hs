@@ -145,7 +145,7 @@ typeParameter = T.Parameter <$> identifier
 
 typeModification :: TypeModification -> Parser T.Type
 typeModification x = do
-    t1 <- recordType <|> typeParameter <|> typeExtension <|> typeContraction
+    t1 <- try typeExtension <|> try typeContraction <|> recordType <|> typeParameter 
     _ <- Token.reservedOp lexer $ case x of
         Extension -> "+"
         Contraction -> "-"
@@ -196,9 +196,9 @@ forAll = do
 typeAnnotation :: Parser T.Type
 typeAnnotation =
     forAll
-        <|> try arrowType
         <|> try typeExtension
         <|> try typeContraction
+        <|> try arrowType
         <|> recordType
         <|> stringType
         <|> intType

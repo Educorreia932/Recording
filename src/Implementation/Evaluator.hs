@@ -57,10 +57,10 @@ substitute var e = sub
         Left _ -> IndexExpression (sub e') i
         Right i' -> case evaluate' e of
             Literal n
-                | var == i' -> IndexExpression (sub e') (Left n)
+                | var == fst i' -> IndexExpression (sub e') (Left $ n + snd i')
                 | otherwise -> IndexExpression (sub e') i
             String s
-                | var == i' -> IndexExpression (sub e') (Right s)
+                | var == fst i' -> IndexExpression (sub e') (Right (s, snd i'))
                 | otherwise -> IndexExpression (sub e') i
             _ -> IndexExpression (sub e') i
     sub (Record m) = Record $ fmap sub m
@@ -70,10 +70,10 @@ substitute var e = sub
         Left _ -> Contraction (sub e') i
         Right i' -> case evaluate' e of
             Literal n
-                | var == i' -> Contraction (sub e') (Left n)
+                | var == fst i' -> Contraction (sub e') (Left $ n + snd i')
                 | otherwise -> Contraction (sub e') i
             String s
-                | var == i' -> Contraction (sub e') (Right s)
+                | var == fst i' -> Contraction (sub e') (Right (s, snd i'))
                 | otherwise -> Contraction (sub e') i
             _ -> Contraction (sub e') i
     sub (Extend e1 e2) = Extend (sub e1) (sub e2)
@@ -117,7 +117,7 @@ evaluate' (IndexApplication fun index) = case evaluate' fun of
                     i
                     ( case index of
                         Left index' -> Literal index'
-                        Right index' -> String index'
+                        Right (index', _) -> String index'
                     )
                     body
          in evaluate' s

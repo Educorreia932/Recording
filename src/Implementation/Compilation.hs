@@ -3,11 +3,12 @@ module Implementation.Compilation (compile) where
 import Control.Monad.State
 import Data.List (find)
 import Data.Map qualified as Map
-import Data.Set qualified as Set
+import Debug.Trace
 import Explicit.Parser
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
 import Implementation.Terms qualified as I
+import Data.Bifunctor (second)
 
 type IndexType = (String, T.Type)
 type IndexAssignment = Map.Map String IndexType
@@ -38,27 +39,22 @@ idx (l, t) indexAssign =
 
 compile' :: E.Expression -> State CompilationState I.Expression
 -- Variable
-compile' (E.Variable x t)
-   | null t = return $ I.Variable x
+compile' (E.Variable x typeInstances)
+   | null typeInstances = return $ I.Variable x
    | otherwise = do
       (indexAssign, typeAssign) <- get
       let
-         t' :: T.Type
-         t' = typeAssign Map.! x
-
-         s :: [(String, T.Type)]
-         s = zip (T.typeParameters t') t
-
-         l :: String
-         l = fst $ Set.elemAt 0 $ indexSet t'
+         t = typeAssign Map.! x
+         substitutionMap = Map.fromList $ zip (map T.Parameter (T.typeParameters t)) typeInstances
+         indexes = map (second (substitutionMap Map.!)) (indexSet t)
       return
          $ foldl
-            ( \acc (_, s') -> case idx (l, s') indexAssign of
+            ( \acc (l, s') -> case idx (l, s') indexAssign of
                Just i -> I.IndexApplication acc i
                Nothing -> acc
             )
             (I.Variable x)
-            s
+            indexes
 
 -- Constants
 compile' (E.String s) = return $ I.String s

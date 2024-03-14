@@ -55,7 +55,7 @@ substitute var e = sub
     sub (IndexApplication e1 e2) = IndexApplication (sub e1) e2
     sub (IndexExpression e' i) = case i of
         Left _ -> IndexExpression (sub e') i
-        Right i' -> case e of
+        Right i' -> case evaluate' e of
             Literal n
                 | var == i' -> IndexExpression (sub e') (Left n)
                 | otherwise -> IndexExpression (sub e') i
@@ -68,7 +68,7 @@ substitute var e = sub
     sub (Let v e1 e2) = Let v (sub e1) (sub e2)
     sub (Contraction e' i) = case i of
         Left _ -> Contraction (sub e') i
-        Right i' -> case e of
+        Right i' -> case evaluate' e of
             Literal n
                 | var == i' -> Contraction (sub e') (Left n)
                 | otherwise -> Contraction (sub e') i
@@ -101,7 +101,7 @@ evaluate' (Let var e1 e2) = evaluate' $ substitute var e1 e2
 -- Index expression
 evaluate' (IndexExpression e i) =
     case i of
-        Left i' -> case e of
+        Left i' -> case evaluate' e of
             Record m -> m !! (i' - 1)
             _ -> error "Indexing non-record"
         _ -> error "Invalid index"

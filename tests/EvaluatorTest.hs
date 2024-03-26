@@ -131,14 +131,14 @@ testEvaluate =
         , TestCase
             $ assertEqual
                 "Polymorphic extension and contraction"
-                (Record [Literal 2, Literal 3])
+                (Record [Literal 3, Literal 2])
                 ( evaluate
                     ( let t = "∀t1::{{ A: Int || C: Int }}.(t1 -> ((t1 + { C: Int }) - { A: Int }) )"
                        in "let f: "
                             ++ t
                             ++ "= Poly(λx: t1 -> ( extend(x: t1, C, 2) : (t1 + { C: Int }) \\\\ A )): "
                             ++ t
-                            ++ "in ((f { A: Int, C: Int })) { A: 1, B: 3 }"
+                            ++ "in ((f { A: Int, B: Int })) { A: 1, B: 3 }"
                     )
                 )
         ]

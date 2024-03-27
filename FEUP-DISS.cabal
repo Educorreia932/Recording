@@ -30,6 +30,7 @@ executable FEUP-DISS-exe
     , mtl
     , ordered-containers
     , parsec
+    , lens
 
   hs-source-dirs:   src
   default-language: GHC2021
@@ -52,6 +53,7 @@ library FEUP-DISS-lib
     , mtl
     , ordered-containers
     , parsec
+    , lens
 
   hs-source-dirs:   src
   default-language: GHC2021

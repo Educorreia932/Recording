@@ -79,6 +79,19 @@ testEvaluate =
                             ++ "in ((name String { Name: String, Office: Int })) { Name: \"Joe\", Office: 443 }"
                     )
                 )
+        , TestCase
+            $ assertEqual
+                "Nested record"
+                (Literal 2)
+                ( evaluate
+                    ( let t = "∀t1::{{ C: Int }}.∀t2::{{ B: t1 }}.(t2 -> Int)"
+                       in "let f: "
+                            ++ t
+                            ++ "= Poly(λx: t2 -> ((x : t2).B : t1).C  ): "
+                            ++ t
+                            ++ "in ((f { C: Int } { A: Int, B: { C: Int } })) { A: 1, B: { C: 2 } }"
+                    )
+                )
         ]
 
 tests :: Test

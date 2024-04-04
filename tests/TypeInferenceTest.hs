@@ -4,6 +4,7 @@ import Test.HUnit
 
 import Data.Map qualified as Map
 
+import Data.Map.Ordered qualified as OMap
 import Explicit.Terms
 import Explicit.Types qualified as T
 import Implicit.TypeInference
@@ -11,13 +12,13 @@ import Implicit.TypeInference
 testEvaluate :: Test
 testEvaluate =
     TestList
-        [ TestCase
-            $ assertEqual
+        [ TestCase $
+            assertEqual
                 "Constant"
                 (Literal 42, T.Int)
                 (infer "42")
-        , TestCase
-            $ assertEqual
+        , TestCase $
+            assertEqual
                 "Variable"
                 ( Variable "x" [T.Parameter "s1", T.Parameter "s2"]
                 , T.ForAll
@@ -56,15 +57,15 @@ testEvaluate =
                         )
                     )
                 )
-        , TestCase
-            $ assertEqual
+        , TestCase $
+            assertEqual
                 "Abstraction"
                 ( Abstraction "x" (T.Parameter "s1") (Variable "x" [])
                 , T.Parameter "s1" `T.Arrow` T.Parameter "s1"
                 )
                 (infer "λx -> x")
-        , TestCase
-            $ assertEqual
+        , TestCase $
+            assertEqual
                 "Application"
                 ( Application
                     ( Abstraction "x" (T.Parameter "s1") (Variable "x" [])
@@ -73,8 +74,8 @@ testEvaluate =
                 , T.Int
                 )
                 (infer "(λx -> x) 42")
-        , TestCase
-            $ assertEqual
+        , TestCase $
+            assertEqual
                 "Let expression"
                 ( let t = T.Int `T.Arrow` T.Int
                    in Let
@@ -85,6 +86,21 @@ testEvaluate =
                 , T.Int
                 )
                 (infer "let id = λx -> x in (id) 42")
+        , TestCase $
+            assertEqual
+                "Record"
+                ( ERecord $
+                    OMap.fromList
+                        [ ("A", Literal 1)
+                        , ("B", Literal 2)
+                        ]
+                , T.Record $
+                    Map.fromList
+                        [ ("A", T.Int)
+                        , ("B", T.Int)
+                        ]
+                )
+                (infer "{ A: 1, B: 2 }")
         ]
 
 tests :: Test

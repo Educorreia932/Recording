@@ -2,11 +2,14 @@ module Implicit.TypeInference where
 
 import Control.Monad.State
 import Data.Map qualified as Map
+import Data.Map.Ordered qualified as OMap
 
 import Control.Lens
 import Data.Set qualified as Set
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
+
+import Data.Traversable
 import Implicit.Parser
 import Implicit.Terms
 
@@ -53,6 +56,29 @@ instance Types Scheme where
 instance (Types a) => Types [a] where
   ftv = foldr (Set.union . ftv) Set.empty
   apply s = map (apply s)
+
+instance Types E.Expression where
+  ftv (E.Literal _) = Set.empty
+  ftv (E.String _) = Set.empty
+  ftv (E.Variable _ ts) = ftv ts
+  ftv (E.Abstraction _ t e) = ftv t `Set.union` ftv e
+  ftv (E.Application e1 e2) = ftv e1 `Set.union` ftv e2
+  ftv (E.Let _ t e1 e2) = ftv t `Set.union` ftv e1 `Set.union` ftv e2
+  ftv (E.Poly e t) = ftv e `Set.union` ftv t
+  ftv (E.ERecord m) = Set.unions $ fmap ftv m
+  ftv (E.Dot e t _) = ftv e `Set.union` ftv t
+
+  apply substitution = sub
+   where
+    sub (E.Literal a) = E.Literal a
+    sub (E.String a) = E.String a
+    sub (E.Variable x ts) = E.Variable x $ apply substitution ts
+    sub (E.Abstraction x t e) = E.Abstraction x (apply substitution t) (sub e)
+    sub (E.Application e1 e2) = E.Application (sub e1) (sub e2)
+    sub (E.Let x t e1 e2) = E.Let x (apply substitution t) (sub e1) (sub e2)
+    sub (E.Poly e t) = E.Poly (sub e) (apply substitution t)
+    sub (E.ERecord m) = E.ERecord $ fmap (apply substitution) m
+    sub (E.Dot e t l) = E.Dot (sub e) (apply substitution t) l
 
 nullSubstitution :: Substitution
 nullSubstitution = Map.empty
@@ -146,38 +172,42 @@ infer' (Application e1 e2) =
         s3 = unify (apply s2 t1) (t2 `T.Arrow` t)
     return (s1 `composeSubs` s2 `composeSubs` s3, E.Application m1 m2, apply s3 t)
 
--- Let expression
-infer' (Let x e1 e2) =
-  do
-    (s1, m1, t1) <- infer' e1
-    (kindAssign, typeAssign) <- get
-    let typeAssign' = apply s1 typeAssign
-        t' = generalize typeAssign' t1
-        typeAssign'' = Map.insert x t' typeAssign'
-    _ <- put (kindAssign, typeAssign'')
-    (s2, m2, t2) <- infer' e2
-    let (t'', _) = instantiate t'
-    return
-      ( s2 `composeSubs` s1
-      , E.Let x (apply s2 t'') (E.Poly m1 (apply s2 t'')) m2
-      , t2
-      )
-
 -- Record
--- infer' (Record r) =
---   do
---     (kindAssign, typeAssign) <- get
---     let
---       (s, m, t) =
---         foldr
---           ( \(k, v) (s', m', t') ->
---               do
---                 (s'', m'', t'') <- infer' v
---                 return (s' `composeSubs` s'', (k, m'') : m', (k, t'') : t')
---           )
---           (Map.empty, [], [])
---           r
---     return (s, E.Record m, T.Record t)
+infer' (Record r) =
+  do
+    (kindAssign, typeAssign) <- get
+    let
+      (_, e1) = head (Map.toList r)
+      n = length r
+    (s1, m1, t1) <- infer' e1
+    -- Infer for all fields
+    (_, fieldsInference) <-
+      mapAccumM
+        ( \(s, m, t) (key, value) ->
+            do
+              let typeAssign' = apply s typeAssign
+              _ <- put (kindAssign, typeAssign')
+              (s', m', t') <- infer' value
+              return
+                ( (composeSubs s s', m ++ [m'], t ++ [t'])
+                , (s', m', t')
+                )
+        )
+        (nullSubstitution, [], [])
+        (tail $ Map.toList r)
+    return
+      ( foldr (composeSubs . (\(s, _, _) -> s)) s1 fieldsInference
+      , E.ERecord $
+          OMap.fromList $
+            zip
+              (Map.keys r)
+              (m1 : map (\(_, m, _) -> m) fieldsInference)
+      , T.Record $
+          Map.fromList $
+            zip
+              (Map.keys r)
+              (t1 : map (\(_, _, t) -> t) fieldsInference)
+      )
 
 -- Dot
 infer' (Dot e l) =
@@ -202,6 +232,25 @@ infer' (Dot e l) =
       )
 
 -- Modify
+infer' (Modify e1 l e2) = 
+  undefined
+
+-- Let expression
+infer' (Let x e1 e2) =
+  do
+    (s1, m1, t1) <- infer' e1
+    (kindAssign, typeAssign) <- get
+    let typeAssign' = apply s1 typeAssign
+        t' = generalize typeAssign' t1
+        typeAssign'' = Map.insert x t' typeAssign'
+    _ <- put (kindAssign, typeAssign'')
+    (s2, m2, t2) <- infer' e2
+    let (t'', _) = instantiate t'
+    return
+      ( s2 `composeSubs` s1
+      , E.Let x (apply s2 t'') (E.Poly m1 (apply s2 t'')) m2
+      , t2
+      )
 
 infer :: String -> (E.Expression, T.Type)
 infer s = (expression', t)

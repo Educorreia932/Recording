@@ -47,7 +47,7 @@ compile' (E.Variable x t)
          t' = typeAssign Map.! x
 
          s :: [(String, T.Type)]
-         s = zip (T.typeParameters t') t
+         s = zip (map fst (T.typeParameters t')) t
 
          l :: String
          l = fst $ Set.elemAt 0 $ indexSet t'

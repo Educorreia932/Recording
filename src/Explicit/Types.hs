@@ -1,10 +1,7 @@
 module Explicit.Types where
 
-import Control.Lens
-import Control.Lens.Fold
 import Data.List (intercalate)
 import Data.Map qualified as Map
-import Data.Set qualified as Set
 
 data Kind
     = Universal

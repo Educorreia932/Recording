@@ -101,6 +101,30 @@ testEvaluate =
                         ]
                 )
                 (infer "{ A: 1, B: 2 }")
+        , TestCase $
+            assertEqual
+                "Modify"
+                ( let t =
+                        T.Record
+                            ( Map.fromList
+                                [ ("A", T.Int)
+                                , ("B", T.Int)
+                                ]
+                            )
+                   in ( Modify
+                            ( ERecord $
+                                OMap.fromList
+                                    [ ("A", Literal 1)
+                                    , ("B", Literal 2)
+                                    ]
+                            )
+                            t
+                            "A"
+                            (Literal 3)
+                      , t
+                      )
+                )
+                (infer "modify({ A: 1, B: 2 }, A, 3)")
         ]
 
 tests :: Test

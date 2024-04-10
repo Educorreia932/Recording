@@ -10,11 +10,16 @@ import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
 
 import Data.Traversable
+import Debug.Trace
 import Implicit.Parser
 import Implicit.Terms
 
 data Scheme = Scheme [String] T.Type
 type Substitution = Map.Map String T.Type
+
+type KindAssignment = Map.Map String T.Kind
+type TypeAssignment = Map.Map String Scheme
+type InferenceState = (KindAssignment, TypeAssignment)
 
 class Types a where
   ftv :: a -> Set.Set String
@@ -80,6 +85,15 @@ instance Types E.Expression where
     sub (E.ERecord m) = E.ERecord $ fmap (apply substitution) m
     sub (E.Dot e t l) = E.Dot (sub e) (apply substitution t) l
 
+instance Types TypeAssignment where
+  ftv :: TypeAssignment -> Set.Set String
+  ftv = ftv . Map.elems
+  apply substitution = Map.map (apply substitution)
+
+instance (Types a) => Types (a, a) where
+  ftv (t1, t2) = ftv t1 `Set.union` ftv t2
+  apply substitution (t1, t2) = (apply substitution t1, apply substitution t2)
+
 nullSubstitution :: Substitution
 nullSubstitution = Map.empty
 
@@ -88,15 +102,6 @@ composeSubs s1 s2 = Map.map (apply s1) s2 `Map.union` s1
 
 freshType :: TypeAssignment -> T.Type
 freshType typeAssign = T.Parameter $ "s" ++ show (length typeAssign + 1)
-
-type KindAssignment = Map.Map String T.Kind
-type TypeAssignment = Map.Map String Scheme
-type InferenceState = (KindAssignment, TypeAssignment)
-
-instance Types TypeAssignment where
-  ftv :: TypeAssignment -> Set.Set String
-  ftv = ftv . Map.elems
-  apply substitution = Map.map (apply substitution)
 
 -- | Abstracts a type over all type variables which are free in the type but not in the given type assignment.
 generalize :: TypeAssignment -> T.Type -> Scheme
@@ -112,17 +117,49 @@ instantiate (Scheme params t) =
       instantiated = apply substitution t
    in (instantiated, substitution)
 
--- | Most general unification for two types.
-unify :: T.Type -> T.Type -> Substitution
-unify T.Int T.Int = nullSubstitution
-unify T.String T.String = nullSubstitution
-unify (T.Parameter x) t = varBind x t
-unify t (T.Parameter x) = varBind x t
-unify (T.Arrow t1 t2) (T.Arrow t1' t2') = s1 `composeSubs` s2
+type TypePair = (T.Type, T.Type)
+type UnificationState = (Substitution, [T.KindedType], [TypePair])
+
+unifyStep :: UnificationState -> UnificationState
+unifyStep (s, k, []) = (s, k, [])
+-- Constant types
+unifyStep (s, k, (T.Int, T.Int) : us) = (s, k, us)
+unifyStep (s, k, (T.String, T.String) : us) = (s, k, us)
+unifyStep (s, (_, T.RecordKind f1) : (_, T.RecordKind f2) : ks, (T.Parameter x1, T.Parameter x2) : us) = (s, ks, us)
+-- Type variable
+unifyStep (s, (_, T.Universal) : ks, (T.Parameter x1, t2) : us) = (s `composeSubs` s', ks, apply s' us)
  where
-  s1 = unify t1 t1'
-  s2 = unify (apply s1 t2) (apply s1 t2')
-unify t1 t2 = error $ "Types do not unify: " ++ show t1 ++ " vs. " ++ show t2
+  s' = varBind x1 t2
+unifyStep (s, k, (t1, T.Parameter x2) : us) = (s `composeSubs` s', k, apply s' us)
+ where
+  s' = varBind x2 t1
+-- Record type
+unifyStep (s, (_, T.RecordKind f1) : ks, (T.Parameter x, T.Record f2) : us)
+  | (Map.keysSet f2 `Set.intersection` Map.keysSet f1 == Map.keysSet f1)
+      && not (x `Set.member` ftv (T.Record f2)) =
+      (s `composeSubs` s', ks, apply s' us)
+  | otherwise = error "Types do not unify"
+ where
+  s' = varBind x (T.Record f2)
+unifyStep (s, k, (T.Record f1, T.Record f2) : us)
+  | Map.keysSet f1 == Map.keysSet f2 =
+      (s, k, zip (Map.elems f1) (Map.elems f2) ++ us)
+  | otherwise = error "Types do not unify"
+-- Function type
+unifyStep (s, k, (t1 `T.Arrow` t2, t1' `T.Arrow` t2') : us) = (s, k, (t1, t1') : (t2, t2') : us)
+-- General case
+unifyStep (s, k, (t1, t2) : us)
+  -- Unify same type
+  | t1 == t2 = (s, k, us)
+  | otherwise = error "Types do not unify"
+
+-- | Most general unification for two types.
+unify :: [T.KindedType] -> [TypePair] -> Substitution
+unify k us = unificationAlgorithm (nullSubstitution, k, us)
+ where
+  unificationAlgorithm :: UnificationState -> Substitution
+  unificationAlgorithm (s, _, []) = s
+  unificationAlgorithm (s, k, us) = unificationAlgorithm (unifyStep (s, k, us))
 
 {- | Attempts to bind a type variable to a type and returns that binding as a substitution.
 Avoids binding a variable to itself and performs the occurs check.
@@ -168,8 +205,8 @@ infer' (Application e1 e2) =
     let typeAssign' = apply s1 typeAssign
     _ <- put (kindAssign, typeAssign')
     (s2, m2, t2) <- infer' e2
-    let t = freshType typeAssign
-        s3 = unify (apply s2 t1) (t2 `T.Arrow` t)
+    let t@(T.Parameter x) = freshType typeAssign
+        s3 = unify [(x, T.Universal)] [(apply s2 t1, t2 `T.Arrow` t)]
     return (s1 `composeSubs` s2 `composeSubs` s3, E.Application m1 m2, apply s3 t)
 
 -- Record
@@ -224,16 +261,33 @@ infer' (Dot e l) =
             , (ft2', T.RecordKind $ Map.singleton l ft1)
             ]
     _ <- put (kindAssign', typeAssign)
-    let s2 = unify ft2 t1
+    let s2 = unify [] [(ft2, t1)]
     return
       ( s2 `composeSubs` s1
-      , E.Dot m1 (apply s2 ft2) l -- TODO: Apply s2 to m1
+      , E.Dot (apply s2 m1) (apply s2 ft2) l
       , apply s2 ft1
       )
 
 -- Modify
-infer' (Modify e1 l e2) = 
-  undefined
+infer' (Modify e1 l e2) =
+  do
+    (s1, m1, t1) <- infer' e1
+    (kindAssign, typeAssign) <- get
+    let typeAssign' = apply s1 typeAssign
+    _ <- put (kindAssign, typeAssign')
+    (s2, m2, t2) <- infer' e2
+    let
+      ft1@(T.Parameter ft1') = freshType typeAssign'
+      ft2@(T.Parameter ft2') = T.Parameter (ft1' ++ "'") -- TODO: This will not work
+      s3 =
+        unify
+          [("t1", T.Universal), ("t2", T.RecordKind (Map.singleton l t1))]
+          [(ft1, t2), (ft2, apply s2 t1)]
+    return
+      ( s1 `composeSubs` s2 `composeSubs` s3
+      , E.Modify (apply (s2 `composeSubs` s3) m1) (apply s3 ft2) l (apply s3 m2)
+      , apply s3 ft2
+      )
 
 -- Let expression
 infer' (Let x e1 e2) =

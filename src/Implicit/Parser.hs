@@ -67,7 +67,7 @@ dotExpression = do
 
 modify :: Parser Expression
 modify = do
-    _ <- Token.reserved lexer "modify("
+    _ <- Token.reservedOp lexer "modify("
     e1 <- term
     _ <- Token.reserved lexer ","
     l <- identifier

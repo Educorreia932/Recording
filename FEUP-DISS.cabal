@@ -23,14 +23,16 @@ executable FEUP-DISS-exe
     Implementation.Terms
     Implicit.Parser
     Implicit.Terms
+    Implicit.TypeInference
 
   build-depends:
     , base                ^>=4.18.2.0
     , containers
+    , lens
     , mtl
     , ordered-containers
     , parsec
-    , lens
+    , split
 
   hs-source-dirs:   src
   default-language: GHC2021
@@ -50,10 +52,10 @@ library FEUP-DISS-lib
   build-depends:
     , base                ^>=4.18.2.0
     , containers
+    , lens
     , mtl
     , ordered-containers
     , parsec
-    , lens
 
   hs-source-dirs:   src
   default-language: GHC2021

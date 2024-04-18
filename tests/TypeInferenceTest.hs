@@ -20,18 +20,18 @@ testEvaluate =
         , TestCase $
             assertEqual
                 "Variable"
-                ( Variable "x" [T.Parameter "s1", T.Parameter "s2"]
+                ( Variable "x" [T.Parameter "_s1", T.Parameter "_s2"]
                 , T.ForAll
-                    ("s1", T.Universal)
+                    ("_s1", T.Universal)
                     ( T.ForAll
-                        ( "s2"
+                        ( "_s2"
                         , T.RecordKind
                             ( Map.singleton
                                 "A"
                                 T.Int
                             )
                         )
-                        (T.Parameter "s1" `T.Arrow` T.Parameter "s2")
+                        (T.Parameter "_s1" `T.Arrow` T.Parameter "_s2")
                     )
                 )
                 ( inferWithState
@@ -40,48 +40,53 @@ testEvaluate =
                     , Map.singleton
                         "x"
                         ( Scheme
-                            ["t1", "t2"]
+                            ["_s1", "_s2"]
                             ( T.ForAll
-                                ("t1", T.Universal)
+                                ("_s1", T.Universal)
                                 ( T.ForAll
-                                    ( "t2"
+                                    ( "_s2"
                                     , T.RecordKind
                                         ( Map.singleton
                                             "A"
                                             T.Int
                                         )
                                     )
-                                    (T.Parameter "t1" `T.Arrow` T.Parameter "t2")
+                                    (T.Parameter "_s1" `T.Arrow` T.Parameter "_s2")
                                 )
                             )
                         )
+                    , 0
                     )
                 )
         , TestCase $
             assertEqual
                 "Abstraction"
-                ( Abstraction "x" (T.Parameter "s1") (Variable "x" [])
-                , T.Parameter "s1" `T.Arrow` T.Parameter "s1"
+                ( Abstraction "x" (T.Parameter "_s1") (Variable "x" [])
+                , T.Parameter "_s1" `T.Arrow` T.Parameter "_s1"
                 )
                 (infer "λx -> x")
         , TestCase $
             assertEqual
                 "Application"
                 ( Application
-                    ( Abstraction "x" (T.Parameter "s1") (Variable "x" [])
+                    ( Abstraction
+                        "x"
+                        T.Int
+                        ( ERecord (OMap.singleton ("A", Variable "x" []))
+                        )
                     )
-                    (Literal 42)
-                , T.Int
+                    (Literal 1)
+                , T.Record (Map.singleton "A" T.Int)
                 )
-                (infer "(λx -> x) 42")
+                (infer "(λx -> { A: x }) 1")
         , TestCase $
             assertEqual
                 "Let expression"
-                ( let t = T.Int `T.Arrow` T.Int
+                ( let t = T.ForAll ("_s1", T.Universal) (T.Parameter "_s1" `T.Arrow` T.Parameter "_s1")
                    in Let
                         "id"
                         t
-                        (Poly (Abstraction "x" (T.Parameter "s1") (Variable "x" [])) t)
+                        (Poly (Abstraction "x" (T.Parameter "_s1") (Variable "x" [])) t)
                         (Application (Variable "id" []) (Literal 42))
                 , T.Int
                 )

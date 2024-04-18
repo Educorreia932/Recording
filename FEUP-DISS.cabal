@@ -23,7 +23,7 @@ executable FEUP-DISS-exe
     Implementation.Terms
 
   build-depends:
-    , base                ^>=4.17.2.0
+    , base                ^>=4.18.2.0
     , containers
     , ordered-containers
     , parsec
@@ -42,7 +42,7 @@ library FEUP-DISS-lib
     Implementation.Terms
 
   build-depends:
-    , base                ^>=4.17.2.0
+    , base                ^>=4.18.2.0
     , containers
     , ordered-containers
     , parsec
@@ -60,7 +60,7 @@ test-suite tests
     ParserTest
 
   build-depends:
-    , base           ^>=4.17.2.0
+    , base                ^>=4.18.2.0
     , FEUP-DISS-lib
     , HUnit          ^>=1.6
     , containers

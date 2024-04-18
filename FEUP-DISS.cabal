@@ -21,6 +21,7 @@ executable FEUP-DISS-exe
     Implementation.Compilation
     Implementation.Evaluator
     Implementation.Terms
+    Repl
 
   build-depends:
     , base                ^>=4.18.2.0

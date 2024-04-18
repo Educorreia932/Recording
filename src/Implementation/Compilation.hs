@@ -1,6 +1,7 @@
 module Implementation.Compilation (compile) where
 
 import Control.Monad.State
+import Data.Bifunctor (second)
 import Data.List (find)
 import Data.Map qualified as Map
 import Debug.Trace
@@ -8,7 +9,6 @@ import Explicit.Parser
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
 import Implementation.Terms qualified as I
-import Data.Bifunctor (second)
 
 type IndexType = (String, T.Type)
 type IndexAssignment = Map.Map String IndexType
@@ -47,8 +47,8 @@ compile' (E.Variable x typeInstances)
          t = typeAssign Map.! x
          substitutionMap = Map.fromList $ zip (map T.Parameter (T.typeParameters t)) typeInstances
          indexes = map (second (substitutionMap Map.!)) (indexSet t)
-      return
-         $ foldl
+      return $
+         foldl
             ( \acc (l, s') -> case idx (l, s') indexAssign of
                Just i -> I.IndexApplication acc i
                Nothing -> acc
@@ -118,8 +118,16 @@ compile' (E.Let x t e1 e2) = do
    c2 <- compile' e2
    return $ I.Let x c1 c2
 
-compile :: String -> I.Expression
-compile s = evalState (compile' expression) startState
-  where
-   startState = (Map.empty, Map.empty)
-   expression = parseExpression s
+class Compilable a where
+   compile :: a -> I.Expression
+
+instance Compilable E.Expression where
+   compile e = evalState (compile' e) startState
+     where
+      startState = (Map.empty, Map.empty)
+
+instance Compilable String where
+   compile s = evalState (compile' expression) startState
+     where
+      startState = (Map.empty, Map.empty)
+      expression = parseExpression s

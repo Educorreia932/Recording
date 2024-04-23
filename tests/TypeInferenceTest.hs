@@ -89,7 +89,7 @@ testEvaluate =
                       , t
                       )
                 )
-                (infer "modify({ A: 1, B: 2 }, A, 3)")
+                (typeInference "modify({ A: 1, B: 2 }, A, 3)")
         ]
 
 tests :: Test

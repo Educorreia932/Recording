@@ -86,7 +86,7 @@ evaluate' (Let var e1 e2) = evaluate' $ substitute var e1 e2
 -- Index expression
 evaluate' (IndexExpression e i) =
     case i of
-        Left i' -> case e of
+        Left i' -> case evaluate' e of
             Record m -> case OMap.elemAt m (i' - 1) of
                 Just (_, e') -> e'
                 Nothing -> error "Index out of bounds"

@@ -23,8 +23,8 @@ instance Show Expression where
     show (String s) = show s
     show (Abstraction x t e2) = "λ" ++ x ++ ": " ++ show t ++ " -> " ++ show e2
     show (Application e1 e2) = "(" ++ show e1 ++ ") " ++ show e2
-    show (Poly e t) = "Poly(" ++ show e ++ "): " ++ show t
-    show (Let x t e1 e2) = "let " ++ x ++ " : " ++ show t ++ " = " ++ show e1 ++ " in " ++ show e2
-    show (ERecord m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }"
+    show (Poly e _) = "Poly(" ++ show e ++ ")" 
+    show (Let x t e1 e2) = "let " ++ x ++ ": " ++ show t ++ " = " ++ show e1 ++ " in " ++ show e2
+    show (ERecord m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ " = " ++ show v) $ Map.toAscList m) ++ " }"
     show (Dot e t x) = "(" ++ show e ++ " : " ++ show t ++ ")." ++ x
-    show (Modify e1 t l e2) = "modify(" ++ show e1 ++ " : " ++ show t ++ ", " ++ l ++ ", " ++ show e2 ++ ")"
+    show (Modify e1 t l e2) = "modify(" ++ show e1 ++ ": " ++ show t ++ ", " ++ l ++ ", " ++ show e2 ++ ")"

@@ -25,6 +25,6 @@ instance Show Expression where
     show (Abstraction x e2) = "λ" ++ x ++ " -> " ++ show e2
     show (Application e1 e2) = "(" ++ show e1 ++ ") " ++ show e2
     show (Let x e1 e2) = "let " ++ x ++ " = " ++ show e1 ++ " in " ++ show e2
-    show (Record m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }"
+    show (Record m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ " = " ++ show v) $ Map.toAscList m) ++ " }"
     show (Dot e x) = "(" ++ show e ++ ")." ++ x
     show (Modify e1 l e2) = "modify(" ++ show e1 ++ ", " ++ l ++ ", " ++ show e2 ++ ")"

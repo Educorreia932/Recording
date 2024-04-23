@@ -57,7 +57,18 @@ substitute var e = sub
                 | otherwise -> IndexExpression (sub e') i
             _ -> IndexExpression (sub e') i
     sub (Record m) = Record $ fmap sub m
-    sub (Modify r i e') = Modify (sub r) i (sub e')
+    sub (Modify r i e') = Modify (sub r) i' (sub e')
+      where
+        i' = case i of
+            Left _ -> i
+            Right i'' -> case e of
+                Literal n
+                    | var == i'' -> Left n
+                    | otherwise -> Right i''
+                String s
+                    | var == i'' -> Right s
+                    | otherwise -> Right i''
+                _ -> i
     sub (Let v e1 e2) = Let v (sub e1) (sub e2)
 
 evaluate' :: Expression -> Expression
@@ -69,7 +80,7 @@ evaluate' (Modify (Record r) i e) =
                     Just x -> x
                     Nothing -> error "Index out of bounds"
              in Record $ OMap.alter (\_ -> Just e) k r
-        Right _ -> error "Not implemented"
+        _ -> error "Invalid index"
 -- Let expression
 evaluate' (Let var e1 e2) = evaluate' $ substitute var e1 e2
 -- Index expression
@@ -82,21 +93,23 @@ evaluate' (IndexExpression e i) =
             _ -> error "Indexing non-record"
         _ -> error "Invalid index"
 -- Application
-evaluate' (Application fun arg) = case evaluate' fun of
-    Abstraction var body -> evaluate' $ substitute var arg body
-    other -> Application other arg
+evaluate' (Application fun arg) =
+    case evaluate' fun of
+        Abstraction var body -> evaluate' $ substitute var arg body
+        other -> Application other arg
 -- Index application
-evaluate' (IndexApplication fun index) = case evaluate' fun of
-    IndexAbstraction i body ->
-        evaluate'
-            $ substitute
-                i
-                ( case index of
-                    Left index' -> Literal index'
-                    Right index' -> String index'
-                )
-                body
-    other -> IndexApplication other index
+evaluate' (IndexApplication fun index) =
+    case evaluate' fun of
+        IndexAbstraction i body ->
+            evaluate' $
+                substitute
+                    i
+                    ( case index of
+                        Left index' -> Literal index'
+                        Right index' -> String index'
+                    )
+                    body
+        other -> IndexApplication other index
 evaluate' e = e
 
 evaluate :: String -> Expression

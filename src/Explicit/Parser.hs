@@ -28,7 +28,7 @@ lexeme parser = parser <* spaces
 identifier :: Parser String
 identifier = lexeme $ do
     first <- letter
-    rest <- many alphaNum
+    rest <- many $ alphaNum
     return (first : rest)
 
 parentheses :: Parser a -> Parser a
@@ -81,13 +81,13 @@ modify :: Parser Expression
 modify = do
     _ <- Token.reserved lexer "modify("
     e1 <- term
-    _ <- Token.reservedOp lexer ":"
+    _ <- Token.reserved lexer ":"
     t <- typeAnnotation
-    _ <- Token.reservedOp lexer ","
+    _ <- Token.reserved lexer ","
     l <- identifier
-    _ <- Token.reservedOp lexer ","
+    _ <- Token.reserved lexer ","
     e2 <- term
-    _ <- Token.reservedOp lexer ")"
+    _ <- Token.reserved lexer ")"
     return $ Modify e1 t l e2
 
 recordKind :: Parser T.Kind
@@ -159,7 +159,7 @@ poly :: Parser Expression
 poly = do
     _ <- Token.reserved lexer "Poly"
     e <- parentheses term
-    _ <- Token.reservedOp lexer ":"
+    _ <- Token.reserved lexer ":"
     Poly e <$> typeAnnotation
 
 letExpression :: Parser Expression
@@ -177,7 +177,7 @@ lambda :: Parser Expression
 lambda = do
     _ <- Token.reservedOp lexer "λ" <|> Token.reservedOp lexer "\\"
     x <- identifier
-    _ <- Token.reservedOp lexer ":"
+    _ <- Token.reserved lexer ":"
     t <- typeAnnotation
     _ <- Token.reservedOp lexer "->"
     Abstraction x t <$> term

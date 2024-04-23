@@ -4,7 +4,6 @@ import Control.Monad.State
 import Data.Bifunctor (second)
 import Data.List (find)
 import Data.Map qualified as Map
-import Debug.Trace
 import Explicit.Parser
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
@@ -45,7 +44,7 @@ compile' (E.Variable x typeInstances)
       (indexAssign, typeAssign) <- get
       let
          t = typeAssign Map.! x
-         substitutionMap = Map.fromList $ zip (map T.Parameter (T.typeParameters t)) typeInstances
+         substitutionMap = Map.fromList $ zip (map T.Parameter (map fst $ T.typeParameters t)) typeInstances
          indexes = map (second (substitutionMap Map.!)) (indexSet t)
       return $
          foldl

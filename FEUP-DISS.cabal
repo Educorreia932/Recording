@@ -21,13 +21,21 @@ executable FEUP-DISS-exe
     Implementation.Compilation
     Implementation.Evaluator
     Implementation.Terms
+    Implicit.Parser
+    Implicit.Terms
+    Implicit.TypeInference
+    Implicit.Types
+    Implicit.Unification
+    Repl
 
   build-depends:
     , base                ^>=4.18.2.0
     , containers
+    , lens
+    , mtl
     , ordered-containers
     , parsec
-    , mtl
+    , split
 
   hs-source-dirs:   src
   default-language: GHC2021
@@ -40,13 +48,19 @@ library FEUP-DISS-lib
     Implementation.Compilation
     Implementation.Evaluator
     Implementation.Terms
+    Implicit.Parser
+    Implicit.Terms
+    Implicit.TypeInference
+    Implicit.Types
+    Implicit.Unification
 
   build-depends:
     , base                ^>=4.18.2.0
     , containers
+    , lens
+    , mtl
     , ordered-containers
     , parsec
-    , mtl
 
   hs-source-dirs:   src
   default-language: GHC2021
@@ -55,15 +69,17 @@ test-suite tests
   type:             exitcode-stdio-1.0
   main-is:          Tests.hs
   other-modules:
-    EvaluatorTest
     CompilationTest
+    EvaluatorTest
+    ImplicitParserTest
     ParserTest
+    TypeInferenceTest
 
   build-depends:
     , base                ^>=4.18.2.0
-    , FEUP-DISS-lib
-    , HUnit          ^>=1.6
     , containers
+    , FEUP-DISS-lib
+    , HUnit               ^>=1.6
     , ordered-containers
 
   hs-source-dirs:   tests

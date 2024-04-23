@@ -21,7 +21,7 @@ instance Show Expression where
     show (Literal a) = show a
     show (Variable x t) = x ++ concatMap (\v -> " " ++ show v) t
     show (String s) = show s
-    show (Abstraction x t e2) = "λ" ++ x ++ ":" ++ show t ++ " -> " ++ show e2
+    show (Abstraction x t e2) = "λ" ++ x ++ ": " ++ show t ++ " -> " ++ show e2
     show (Application e1 e2) = "(" ++ show e1 ++ ") " ++ show e2
     show (Poly e t) = "Poly(" ++ show e ++ "): " ++ show t
     show (Let x t e1 e2) = "let " ++ x ++ " : " ++ show t ++ " = " ++ show e1 ++ " in " ++ show e2

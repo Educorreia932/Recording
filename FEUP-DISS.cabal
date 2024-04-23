@@ -24,6 +24,9 @@ executable FEUP-DISS-exe
     Implicit.Parser
     Implicit.Terms
     Implicit.TypeInference
+    Implicit.Types
+    Implicit.Unification
+    Repl
 
   build-depends:
     , base                ^>=4.18.2.0
@@ -48,6 +51,8 @@ library FEUP-DISS-lib
     Implicit.Parser
     Implicit.Terms
     Implicit.TypeInference
+    Implicit.Types
+    Implicit.Unification
 
   build-depends:
     , base                ^>=4.18.2.0

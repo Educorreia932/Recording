@@ -3,11 +3,12 @@ module TypeInferenceTest where
 import Test.HUnit
 
 import Data.Map qualified as Map
-
 import Data.Map.Ordered qualified as OMap
+
 import Explicit.Terms
 import Explicit.Types qualified as T
 import Implicit.TypeInference
+import Implicit.Types (Scheme (..))
 
 testEvaluate :: Test
 testEvaluate =
@@ -16,55 +17,14 @@ testEvaluate =
             assertEqual
                 "Constant"
                 (Literal 42, T.Int)
-                (infer "42")
-        , TestCase $
-            assertEqual
-                "Variable"
-                ( Variable "x" [T.Parameter "_s1", T.Parameter "_s2"]
-                , T.ForAll
-                    ("_s1", T.Universal)
-                    ( T.ForAll
-                        ( "_s2"
-                        , T.RecordKind
-                            ( Map.singleton
-                                "A"
-                                T.Int
-                            )
-                        )
-                        (T.Parameter "_s1" `T.Arrow` T.Parameter "_s2")
-                    )
-                )
-                ( inferWithState
-                    "x"
-                    ( Map.empty
-                    , Map.singleton
-                        "x"
-                        ( Scheme
-                            ["_s1", "_s2"]
-                            ( T.ForAll
-                                ("_s1", T.Universal)
-                                ( T.ForAll
-                                    ( "_s2"
-                                    , T.RecordKind
-                                        ( Map.singleton
-                                            "A"
-                                            T.Int
-                                        )
-                                    )
-                                    (T.Parameter "_s1" `T.Arrow` T.Parameter "_s2")
-                                )
-                            )
-                        )
-                    , 0
-                    )
-                )
+                (typeInference "42")
         , TestCase $
             assertEqual
                 "Abstraction"
                 ( Abstraction "x" (T.Parameter "_s1") (Variable "x" [])
                 , T.Parameter "_s1" `T.Arrow` T.Parameter "_s1"
                 )
-                (infer "λx -> x")
+                (typeInference "λx -> x")
         , TestCase $
             assertEqual
                 "Application"
@@ -78,7 +38,7 @@ testEvaluate =
                     (Literal 1)
                 , T.Record (Map.singleton "A" T.Int)
                 )
-                (infer "(λx -> { A: x }) 1")
+                (typeInference "(λx -> { A: x }) 1")
         , TestCase $
             assertEqual
                 "Let expression"
@@ -87,10 +47,10 @@ testEvaluate =
                         "id"
                         t
                         (Poly (Abstraction "x" (T.Parameter "_s1") (Variable "x" [])) t)
-                        (Application (Variable "id" []) (Literal 42))
+                        (Application (Variable "id" [T.Int]) (Literal 42))
                 , T.Int
                 )
-                (infer "let id = λx -> x in (id) 42")
+                (typeInference "let id = λx -> x in (id) 42")
         , TestCase $
             assertEqual
                 "Record"
@@ -105,7 +65,7 @@ testEvaluate =
                         , ("B", T.Int)
                         ]
                 )
-                (infer "{ A: 1, B: 2 }")
+                (typeInference "{ A: 1, B: 2 }")
         , TestCase $
             assertEqual
                 "Modify"

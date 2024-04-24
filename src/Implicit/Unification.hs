@@ -39,26 +39,26 @@ unifyStep' (u, k, s) (ui, ki) =
                         , s `composeSubs` s'
                         )
         -- (III)
-        ((T.Parameter x1, T.Parameter x2), (x1', T.RecordKind f1))
+        ((T.Parameter x1, T.Parameter x2), (x1', T.RecordKind f1 _))
             | x1 == x1' ->
                 case Map.lookup x2 k of
-                    Just (T.RecordKind f2) ->
+                    Just (T.RecordKind f2 _) ->
                         let s' = Map.singleton x1 (T.Parameter x2)
                             u' = Set.delete ui u
                             k' = Map.delete x1 k
                          in Just
                                 ( apply s' (u' `Set.union` Set.fromList [(f1 Map.! l, f2 Map.! l) | l <- Map.keys f1, l `Map.member` f2])
-                                , apply s' (k' `Map.union` Map.singleton x2 (T.RecordKind $ apply s' (f1 `Map.union` f2)))
+                                , apply s' (k' `Map.union` Map.singleton x2 (T.RecordKind (apply s' (f1 `Map.union` f2)) Map.empty))
                                 , s `composeSubs` s'
                                 )
                     _ -> Nothing
         -- (IV)
-        ((T.Record f2, T.Parameter x), (x', T.RecordKind f1))
+        ((T.Record f2, T.Parameter x), (x', T.RecordKind f1 _))
             | x == x'
                 && (Map.keysSet f1 `Set.intersection` Map.keysSet f2 == Map.keysSet f1)
                 && not (x `Set.member` ftv (T.Record f2)) ->
-                unifyStep' (u, k, s) ((T.Parameter x, T.Record f2), (x', T.RecordKind f1))
-        ((T.Parameter x, T.Record f2), (x', T.RecordKind f1))
+                unifyStep' (u, k, s) ((T.Parameter x, T.Record f2), (x', T.RecordKind f1 Map.empty))
+        ((T.Parameter x, T.Record f2), (x', T.RecordKind f1 _))
             | x == x'
                 && (Map.keysSet f1 `Set.intersection` Map.keysSet f2 == Map.keysSet f1)
                 && not (x `Set.member` ftv (T.Record f2)) ->

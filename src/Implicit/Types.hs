@@ -48,12 +48,12 @@ instance Types T.Type where
 
 instance Types T.Kind where
   ftv T.Universal = Set.empty
-  ftv (T.RecordKind m) = Set.unions $ fmap ftv m
+  ftv (T.RecordKind l r) = ftv l `Set.union` ftv r
 
   apply substitution = sub
    where
     sub T.Universal = T.Universal
-    sub (T.RecordKind m) = T.RecordKind $ fmap (apply substitution) m
+    sub (T.RecordKind l r) = T.RecordKind (apply substitution l) (apply substitution r)
 
 instance Types Scheme where
   ftv (Scheme params t) = ftv t Set.\\ Set.fromList params
@@ -74,9 +74,11 @@ instance Types E.Expression where
   ftv (E.Application e1 e2) = ftv e1 `Set.union` ftv e2
   ftv (E.Let _ t e1 e2) = ftv t `Set.union` ftv e1 `Set.union` ftv e2
   ftv (E.Poly e t) = ftv e `Set.union` ftv t
-  ftv (E.ERecord m) = Set.unions $ fmap ftv m
+  ftv (E.Record m) = Set.unions $ fmap ftv m
   ftv (E.Dot e t _) = ftv e `Set.union` ftv t
   ftv (E.Modify e1 t _ e2) = ftv e1 `Set.union` ftv t `Set.union` ftv e2
+  ftv (E.Contract e t _) = ftv e `Set.union` ftv t
+  ftv (E.Extend e1 t _ e2) = ftv e1 `Set.union` ftv t `Set.union` ftv e2
 
   apply substitution = sub
    where
@@ -87,9 +89,11 @@ instance Types E.Expression where
     sub (E.Application e1 e2) = E.Application (sub e1) (sub e2)
     sub (E.Let x t e1 e2) = E.Let x (apply substitution t) (sub e1) (sub e2)
     sub (E.Poly e t) = E.Poly (sub e) (apply substitution t)
-    sub (E.ERecord m) = E.ERecord $ fmap (apply substitution) m
+    sub (E.Record m) = E.Record $ fmap (apply substitution) m
     sub (E.Dot e t l) = E.Dot (sub e) (apply substitution t) l
     sub (E.Modify e1 t l e2) = E.Modify (sub e1) (apply substitution t) l (sub e2)
+    sub (E.Contract e t l) = E.Contract (sub e) (apply substitution t) l
+    sub (E.Extend e1 t l e2) = E.Extend (sub e1) (apply substitution t) l (sub e2)
 
 instance (Types a) => Types (Map.Map String a) where
   ftv = ftv . Map.elems

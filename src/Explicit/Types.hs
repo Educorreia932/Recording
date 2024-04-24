@@ -3,14 +3,18 @@ module Explicit.Types where
 import Data.List (intercalate)
 import Data.Map qualified as Map
 
+type Fields = Map.Map String Type
+
 data Kind
     = Universal
-    | RecordKind (Map.Map String Type)
+    | RecordKind Fields Fields
     deriving (Eq, Ord)
 
 instance Show Kind where
     show Universal = "U"
-    show (RecordKind m) = "{{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }}"
+    show (RecordKind m1 m2) = "{{ " ++ showFields m1 ++ " || " ++ showFields m2 ++ " }}"
+      where
+        showFields x = intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList x)
 
 type KindedType = (String, Kind)
 
@@ -19,8 +23,10 @@ data Type
     | String
     | Parameter String
     | Arrow Type Type
-    | Record (Map.Map String Type)
+    | Record Fields
     | ForAll KindedType Type
+    | Extension Type String Type
+    | Contraction Type String Type
     deriving (Eq, Ord)
 
 instance Show Type where
@@ -30,6 +36,8 @@ instance Show Type where
     show (Arrow t1 t2) = "(" ++ show t1 ++ " -> " ++ show t2 ++ ")"
     show (ForAll (t, k) t') = "∀" ++ t ++ "::" ++ show k ++ "." ++ show t'
     show (Record m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }"
+    show (Extension t1 l t2) = show t1 ++ " + { " ++ l ++ ": " ++ show t2 ++ "}"
+    show (Contraction t1 l t2) = show t1 ++ " - { " ++ l ++ ": " ++ show t2 ++ "}"
 
 -- Retrieves all (type, kind) pairs from a polymorphic type
 typeParameters :: Type -> [KindedType]
@@ -41,4 +49,13 @@ concreteType :: Type -> Type
 concreteType (ForAll _ t) = concreteType t
 concreteType t = t
 
+typeKinds :: Type -> [Kind]
+typeKinds Int = []
+typeKinds String = []
+typeKinds (Parameter _) = [Universal]
+typeKinds (Arrow t1 t2) = typeKinds t1 ++ typeKinds t2
+typeKinds (Record m) = concatMap typeKinds (Map.elems m)
+typeKinds (ForAll (_, k) t') = k : typeKinds t'
+typeKinds (Extension t1 _ t2) = typeKinds t1 ++ typeKinds t2
+typeKinds (Contraction t1 _ t2) = typeKinds t1 ++ typeKinds t2
 

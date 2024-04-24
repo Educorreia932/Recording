@@ -3,7 +3,6 @@ module ParserTest where
 import Test.HUnit
 
 import Data.Map qualified as Map
-import Data.Map.Ordered qualified as OMap
 import Explicit.Parser
 import Explicit.Terms
 import Explicit.Types qualified as T
@@ -24,13 +23,13 @@ testParser =
         , TestCase
             $ assertEqual
                 "Record"
-                (ERecord (OMap.fromList [("Name", String "Joe"), ("Office", Literal 433)]))
+                (Record (Map.fromList [("Name", String "Joe"), ("Office", Literal 433)]))
                 (parseExpression "{ Name: \"Joe\", Office: 433 }")
         , TestCase
             $ assertEqual
                 "Field access"
                 ( Dot
-                    (ERecord (OMap.fromList [("Name", String "Joe"), ("Office", Literal 433)]))
+                    (Record (Map.fromList [("Name", String "Joe"), ("Office", Literal 433)]))
                     (T.Record (Map.fromList [("Name", T.String), ("Office", T.Int)]))
                     "Name"
                 )
@@ -39,12 +38,31 @@ testParser =
             $ assertEqual
                 "Application"
                 ( Modify
-                    (ERecord (OMap.singleton ("Name", String "Joe")))
+                    (Record (Map.singleton "Name" (String "Joe")))
                     (T.Record (Map.singleton "Name" T.String))
                     "Name"
                     (String "Hanako")
                 )
                 (parseExpression "modify({ Name: \"Joe\"} : { Name: String }, Name, \"Hanako\")")
+        , TestCase
+            $ assertEqual
+                "Contraction"
+                ( Contract
+                    (Record (Map.singleton "Name" (String "Joe")))
+                    (T.Record (Map.singleton "Name" T.String))
+                    "Name"
+                )
+                (parseExpression "({ Name: \"Joe\" } : { Name: String } \\\\ Name)")
+        , TestCase
+            $ assertEqual
+                "Extension"
+                ( Extend
+                    (Record (Map.singleton "Name" (String "Joe")))
+                    (T.Record (Map.singleton "Name" T.String))
+                    "Office"
+                    (Literal 433)
+                )
+                (parseExpression "extend({ Name: \"Joe\"} : { Name: String }, Office, 433)")
         , TestCase
             $ assertEqual
                 "Application"
@@ -66,12 +84,12 @@ testParser =
                 ( Abstraction
                     "x"
                     ( T.ForAll
-                        ("t", T.RecordKind (Map.singleton "Name" T.String))
+                        ("t", T.RecordKind (Map.singleton "Name" T.String) Map.empty)
                         (T.Parameter "t" `T.Arrow` T.Parameter "t")
                     )
                     (Variable "x" [])
                 )
-                (parseExpression "λx : ∀t::{{ Name: String }}.(t -> t) -> x")
+                (parseExpression "λx : ∀t::{{ Name: String || }}.(t -> t) -> x")
         , TestCase
             $ assertEqual
                 "Polymorphic field access"
@@ -88,12 +106,12 @@ testParser =
                     ( T.ForAll
                         ("t1", T.Universal)
                         ( T.ForAll
-                            ("t2", T.RecordKind (Map.singleton "Name" T.String))
+                            ("t2", T.RecordKind (Map.singleton "Name" T.String) Map.empty)
                             (T.Parameter "t1" `T.Arrow` T.Parameter "t2")
                         )
                     )
                 )
-                (parseExpression "Poly(λx : t2 -> (x : t2).Name): ∀t1::U.∀t2::{{ Name: String }}.(t1 -> t2)")
+                (parseExpression "Poly(λx : t2 -> (x : t2).Name): ∀t1::U.∀t2::{{ Name: String || }}.(t1 -> t2)")
         , TestCase
             $ assertEqual
                 "Let expression"

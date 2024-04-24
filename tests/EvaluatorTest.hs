@@ -3,7 +3,7 @@ module EvaluatorTest where
 import System.Exit qualified as Exit
 import Test.HUnit (Test (TestCase, TestList), assertEqual)
 
-import Data.Map.Ordered qualified as OMap
+import Data.Map qualified as Map
 import Explicit.Parser
 import Implementation.Evaluator
 import Implementation.Terms
@@ -59,7 +59,7 @@ testEvaluate =
         , TestCase
             $ assertEqual
                 "Modification"
-                (Record (OMap.singleton ("Name", String "Hanako")))
+                (Record [String "Hanako"])
                 (evaluate "modify({ Name: \"Joe\"} : { Name: String }, Name, \"Hanako\")")
         , TestCase
             $ assertEqual
@@ -71,10 +71,10 @@ testEvaluate =
                 "Polymorphic field access"
                 (String "Joe")
                 ( evaluate
-                    ( let t = "∀t1::U.∀t2::{{ Name: String }}.(t1 -> t2)"
+                    ( let t = "∀t1::U.∀t2::{{ Name: String || }}.(t1 -> t2)"
                        in "let name: "
                             ++ t
-                            ++ "= Poly(λx: t2 -> (x : t2).Name): "
+                            ++ "= Poly(λx: t2 -> (x: t2).Name): "
                             ++ t
                             ++ "in ((name String { Name: String, Office: Int })) { Name: \"Joe\", Office: 443 }"
                     )
@@ -84,12 +84,61 @@ testEvaluate =
                 "Nested record"
                 (Literal 2)
                 ( evaluate
-                    ( let t = "∀t1::{{ C: Int }}.∀t2::{{ B: t1 }}.(t2 -> Int)"
+                    ( let t = "∀t1::{{ C: Int || }}.∀t2::{{ B: t1 || }}.(t2 -> Int)"
                        in "let f: "
                             ++ t
-                            ++ "= Poly(λx: t2 -> ((x : t2).B : t1).C  ): "
+                            ++ "= Poly(λx: t2 -> ((x : t2).B : t1).C ): "
                             ++ t
                             ++ "in ((f { C: Int } { A: Int, B: { C: Int } })) { A: 1, B: { C: 2 } }"
+                    )
+                )
+        , TestCase
+            $ assertEqual
+                "Contraction"
+                (Record [Literal 443])
+                (evaluate "({ Name: \"Joe\", Office: 443 } : { Name: String, Office: Int } \\\\ Name)")
+        , TestCase
+            $ assertEqual
+                "Extension"
+                (Record [String "Joe", Literal 443])
+                (evaluate "extend({ Name: \"Joe\"} : { Name: String }, Office, 443)")
+        , TestCase
+            $ assertEqual
+                "Polymorphic extension"
+                (Record [Literal 1, Literal 2])
+                ( evaluate
+                    ( let t = "∀t1::{{ || B: Int }}.(t1 -> (t1 + { B: Int }) )"
+                       in "let f: "
+                            ++ t
+                            ++ "= Poly(λx: t1 -> extend( x: t1, B, 2 ) ): "
+                            ++ t
+                            ++ "in ((f { A: Int } )) { A: 1 }"
+                    )
+                )
+        , TestCase
+            $ assertEqual
+                "Polymorphic contraction"
+                (Record [Literal 2])
+                ( evaluate
+                    ( let t = "∀t1::{{ A: Int || }}.(t1 -> (t1 - { A: Int }) )"
+                       in "let f: "
+                            ++ t
+                            ++ "= Poly(λx: t1 -> ( x: t1 \\\\ A )): "
+                            ++ t
+                            ++ "in ((f { A: Int, B: Int })) { A: 1, B: 2 }"
+                    )
+                )
+        , TestCase
+            $ assertEqual
+                "Polymorphic extension and contraction"
+                (Record [Literal 3, Literal 2])
+                ( evaluate
+                    ( let t = "∀t1::{{ A: Int || C: Int }}.(t1 -> ((t1 + { C: Int }) - { A: Int }) )"
+                       in "let f: "
+                            ++ t
+                            ++ "= Poly(λx: t1 -> ( extend(x: t1, C, 2) : (t1 + { C: Int }) \\\\ A )): "
+                            ++ t
+                            ++ "in ((f { A: Int, B: Int })) { A: 1, B: 3 }"
                     )
                 )
         ]

@@ -3,7 +3,6 @@ module TypeInferenceTest where
 import Test.HUnit
 
 import Data.Map qualified as Map
-import Data.Map.Ordered qualified as OMap
 
 import Explicit.Terms
 import Explicit.Types qualified as T
@@ -32,7 +31,7 @@ testEvaluate =
                     ( Abstraction
                         "x"
                         T.Int
-                        ( ERecord (OMap.singleton ("A", Variable "x" []))
+                        ( Record (Map.singleton "A" (Variable "x" []))
                         )
                     )
                     (Literal 1)
@@ -54,8 +53,8 @@ testEvaluate =
         , TestCase $
             assertEqual
                 "Record"
-                ( ERecord $
-                    OMap.fromList
+                ( Record $
+                    Map.fromList
                         [ ("A", Literal 1)
                         , ("B", Literal 2)
                         ]
@@ -77,8 +76,8 @@ testEvaluate =
                                 ]
                             )
                    in ( Modify
-                            ( ERecord $
-                                OMap.fromList
+                            ( Record $
+                                Map.fromList
                                     [ ("A", Literal 1)
                                     , ("B", Literal 2)
                                     ]

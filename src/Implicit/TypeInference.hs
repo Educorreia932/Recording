@@ -143,8 +143,8 @@ infer (k, t) = infer'
       return
         ( last (k1 : map (\(ki, _, _, _) -> ki) fieldsInference)
         , foldr (composeSubs . (\(_, si, _, _) -> si)) s1 fieldsInference
-        , E.ERecord $
-            OMap.fromList $
+        , E.Record $
+            Map.fromList $
               zip
                 (Map.keys r)
                 (m1' : map (\(_, _, mi, _) -> mi) fieldsInference)
@@ -169,7 +169,7 @@ infer (k, t) = infer'
             ( k1
                 `Map.union` Map.fromList
                   [ (alpha1', T.Universal)
-                  , (alpha2', T.RecordKind $ Map.singleton l alpha1)
+                  , (alpha2', T.RecordKind (Map.singleton l alpha1) Map.empty)
                   ]
             )
             [(alpha2, tau1)]
@@ -195,7 +195,7 @@ infer (k, t) = infer'
             ( k2
                 `Map.union` Map.fromList
                   [ (alpha1', T.Universal)
-                  , (alpha2', T.RecordKind $ Map.singleton l alpha1)
+                  , (alpha2', T.RecordKind (Map.singleton l alpha1) Map.empty)
                   ]
             )
             [ (alpha1, tau2)

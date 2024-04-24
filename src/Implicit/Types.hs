@@ -28,8 +28,10 @@ instance Types T.Type where
   ftv T.String = Set.empty
   ftv (T.Parameter x) = Set.singleton x
   ftv (T.Arrow t1 t2) = ftv t1 `Set.union` ftv t2
-  ftv (T.Record m) = Set.unions $ fmap ftv m
+  ftv (T.Record m) = ftv m
   ftv (T.ForAll (l, _) t') = ftv t' Set.\\ Set.singleton l
+  ftv (T.Contraction t1 _ t2) = ftv t1 Set.\\ ftv t2
+  ftv (T.Extension t1 _ t2) = ftv t1 `Set.union` ftv t2
 
   apply substitution = sub
    where
@@ -45,6 +47,8 @@ instance Types T.Type where
           let substitution' = Map.delete t substitution
            in T.ForAll (t, k) $ apply substitution' t'
       | otherwise = T.ForAll (t, k) $ sub t'
+    sub (T.Contraction t1 l t2) = T.Contraction (sub t1) l (sub t2)
+    sub (T.Extension t1 l t2) = T.Extension (sub t1) l (sub t2)
 
 instance Types T.Kind where
   ftv T.Universal = Set.empty

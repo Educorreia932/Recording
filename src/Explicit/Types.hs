@@ -59,3 +59,15 @@ typeKinds (ForAll (_, k) t') = k : typeKinds t'
 typeKinds (Extension t1 _ t2) = typeKinds t1 ++ typeKinds t2
 typeKinds (Contraction t1 _ t2) = typeKinds t1 ++ typeKinds t2
 
+root :: Type -> Type
+root (Extension t _ _) = root t
+root (Contraction t _ _) = root t
+root t = t
+
+contractions :: Type -> Map.Map String Type
+contractions (Contraction t l t') = Map.insert l t' $ contractions t
+contractions _ = Map.empty
+
+extensions :: Type -> Map.Map String Type
+extensions (Extension t l t') = Map.insert l t' $ extensions t
+extensions _ = Map.empty

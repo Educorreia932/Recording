@@ -201,7 +201,7 @@ infer (k, t) = infer'
             [ (alpha1, tau2)
             , (alpha2, apply s2 tau1)
             ]
-      return 
+      return
         ( k3
         , s3 `composeSubs` s2 `composeSubs` s1
         , E.Modify
@@ -230,6 +230,33 @@ infer (k, t) = infer'
         , E.Let x (apply s2 sigma') (E.Poly m1' (apply s2 sigma')) m2'
         , tau2
         )
+
+  -- Contract
+  infer' (Contract m1 l) = do
+    (k1, s1, m1', tau1) <- infer' m1
+    alpha1 <- freshType
+    alpha2 <- freshType
+    let
+      (T.Parameter alpha1') = alpha1
+      (T.Parameter alpha2') = alpha2
+      (k2, s2) =
+        unify
+          ( k1
+              `Map.union` Map.fromList
+                [ (alpha1', T.Universal)
+                , (alpha2', T.RecordKind (Map.singleton l alpha1) Map.empty)
+                ]
+          )
+          [(alpha2, tau1)]
+    return
+      ( k2
+      , s2 `composeSubs` s1
+      , E.Contract m1' (apply s2 tau1) l
+      , apply s2 (T.Contraction alpha2 l alpha1)
+      )
+
+  -- Extend
+  infer' (Extend m1 l m2) = undefined
 
 typeInference :: String -> (E.Expression, T.Type)
 typeInference s = (m, tau)

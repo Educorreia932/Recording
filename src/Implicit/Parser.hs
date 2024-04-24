@@ -6,7 +6,7 @@ import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Text.Parsec (alphaNum, many, parse, (<|>))
 import Text.Parsec.Char (letter, spaces)
-import Text.Parsec.Combinator (eof, many1, sepBy)
+import Text.Parsec.Combinator (eof, sepBy)
 import Text.Parsec.Language (emptyDef)
 import Text.Parsec.String (Parser)
 import Text.Parsec.Token qualified as Token
@@ -85,6 +85,23 @@ letExpression = do
     _ <- Token.reserved lexer "in"
     Let x e1 <$> term
 
+contraction :: Parser Expression
+contraction = parentheses $ do
+    e <- term
+    _ <- Token.reservedOp lexer "\\\\"
+    Contract e <$> identifier
+
+extend :: Parser Expression
+extend = do
+    _ <- Token.reservedOp lexer "extend("
+    e1 <- term
+    _ <- Token.reserved lexer ","
+    l <- identifier
+    _ <- Token.reserved lexer ","
+    e2 <- term
+    _ <- Token.reserved lexer ")"
+    return $ Extend e1 l e2
+
 lambda :: Parser Expression
 lambda = do
     _ <- Token.reservedOp lexer "λ" <|> Token.reservedOp lexer "\\"
@@ -95,9 +112,11 @@ lambda = do
 term :: Parser Expression
 term =
     lambda
+        <|> try contraction
         <|> letExpression
         <|> record
         <|> modify
+        <|> extend
         <|> try dotExpression
         <|> application
         <|> string

@@ -12,11 +12,15 @@ data Kind
 
 instance Show Kind where
     show Universal = "U"
-    show (RecordKind m1 m2) = "{{ " ++ showFields m1 ++ " || " ++ showFields m2 ++ " }}"
+    show (RecordKind m1 m2) = "{{ " ++ showFields m1 ++ "|| " ++ showFields m2 ++ "}}"
       where
-        showFields x = intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList x)
+        showFields x =
+            intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList x)
+                ++ if not (null x) then " " else ""
 
 type KindedType = (String, Kind)
+
+data TypeModification = TypeContraction | TypeExtension
 
 data Type
     = Int

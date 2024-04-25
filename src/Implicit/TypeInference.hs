@@ -4,12 +4,12 @@ module Implicit.TypeInference where
 
 import Control.Monad.State
 import Data.Map qualified as Map
-import Data.Map.Ordered qualified as OMap
 
 import Data.Set qualified as Set
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
 
+import Control.Monad (when)
 import Data.Traversable
 import Debug.Trace
 import Implicit.Parser
@@ -256,7 +256,33 @@ infer (k, t) = infer'
       )
 
   -- Extend
-  infer' (Extend m1 l m2) = undefined
+  infer' (Extend m1 l m2) = do
+    (k1, s1, m1', tau1) <- infer' m1
+    (k2, s2, m2', tau2) <- infer (k1, apply s1 t) m2
+    let T.Parameter tau1' = T.root tau1
+    when (tau1' `Set.member` ftv tau2) $ error "Type inference failed"
+    alpha1 <- freshType
+    alpha2 <- freshType
+    let
+      (T.Parameter alpha1') = alpha1
+      (T.Parameter alpha2') = alpha2
+      (k3, s3) =
+        unify
+          ( k2
+              `Map.union` Map.fromList
+                [ (alpha1', T.Universal)
+                , (alpha2', T.RecordKind Map.empty (Map.singleton l alpha1))
+                ]
+          )
+          [ (alpha1, tau2)
+          , (alpha2, apply s2 tau1)
+          ]
+    return
+      ( k3
+      , s3 `composeSubs` s2 `composeSubs` s1
+      , E.Extend m1' (apply s3 tau1) l m2'
+      , apply s3 (T.Extension alpha2 l alpha1)
+      )
 
 typeInference :: String -> (E.Expression, T.Type)
 typeInference s = (m, tau)

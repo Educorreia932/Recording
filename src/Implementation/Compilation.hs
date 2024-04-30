@@ -53,10 +53,23 @@ insertionIndex (x : xs) l
 -- Finds the index of a label in an index assignment
 idx :: IndexType -> IndexAssignment -> Maybe I.Index
 idx (l, T.Record r) _ = Just $ Left $ insertionIndex (Map.keys r) l + 1
+idx (l, T.Contraction t1 l' t2) indexAssign = case idx (l, t1) indexAssign of
+   Just (Left n) -> Just $ Left $ n + offset
+   Just (Right (i', offset')) -> Just $ Right (i', offset' + offset)
+   Nothing -> Nothing
+  where
+   offset = if l' <= l then 1 else 0
+idx (l, T.Extension t1 l' t2) indexAssign = case idx (l, t1) indexAssign of
+   Just (Left n) -> Just $ Left $ n + offset
+   Just (Right (i', offset')) -> Just $ Right (i', offset' + offset)
+   Nothing -> Nothing
+  where
+   offset = if l' <= l then 1 else 0
 idx (l, t) indexAssign =
-   let offset = indexOffset l t
-    in find (\(_, idxType) -> idxType == (l, baseType t)) (Map.toList indexAssign)
-         >>= \(i, _) -> Just $ Right (i, offset)
+   find (\(_, idxType) -> idxType == (l, baseType t)) (Map.toList indexAssign)
+      >>= \(i, _) -> Just $ Right (i, offset)
+  where
+   offset = indexOffset l t
 
 type CompilationState = (IndexAssignment, TypeAssignment)
 
@@ -68,7 +81,7 @@ compile' (E.Variable x typeInstances)
       (indexAssign, typeAssign) <- get
       let
          t = typeAssign Map.! x
-         substitutionMap = Map.fromList $ zip (map T.Parameter (map fst $ T.typeParameters t)) typeInstances
+         substitutionMap = Map.fromList $ zip (map (T.Parameter . fst) (T.typeParameters t)) typeInstances
          indexes = map (second (substitutionMap Map.!)) (indexSet t)
       return $
          foldl

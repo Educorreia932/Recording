@@ -17,16 +17,6 @@ import Implicit.Terms
 import Implicit.Types
 import Implicit.Unification
 
-type TIState = Int
-type TI a = State TIState a
-type TypeEnv = (KindAssignment, TypeAssignment)
-
-freshType :: TI T.Type
-freshType = do
-  i <- get
-  put $ i + 1
-  return $ T.Parameter $ "_s" ++ show (i + 1)
-
 {- | Create a type scheme out of a type.
 
 __Examples:__
@@ -107,11 +97,11 @@ infer (k, t) = infer'
       (k2, s2, m2', tau2) <- infer (k1, apply s1 t) m2
       alpha <- freshType
       let (T.Parameter alpha') = alpha
-          (k3, s3) =
-            unify
-              ( k2 `Map.union` Map.singleton alpha' T.Universal
-              )
-              [(apply s2 tau1, tau2 `T.Arrow` alpha)]
+      (k3, s3) <-
+        unify
+          ( k2 `Map.union` Map.singleton alpha' T.Universal
+          )
+          [(apply s2 tau1, tau2 `T.Arrow` alpha)]
       return
         ( k3
         , s3 `composeSubs` s2 `composeSubs` s1
@@ -164,15 +154,15 @@ infer (k, t) = infer'
       let
         (T.Parameter alpha1') = alpha1
         (T.Parameter alpha2') = alpha2
-        (k2, s2) =
-          unify
-            ( k1
-                `Map.union` Map.fromList
-                  [ (alpha1', T.Universal)
-                  , (alpha2', T.RecordKind (Map.singleton l alpha1) Map.empty)
-                  ]
-            )
-            [(alpha2, tau1)]
+      (k2, s2) <-
+        unify
+          ( k1
+              `Map.union` Map.fromList
+                [ (alpha1', T.Universal)
+                , (alpha2', T.RecordKind (Map.singleton l alpha1) Map.empty)
+                ]
+          )
+          [(alpha2, tau1)]
       return
         ( k2
         , s2 `composeSubs` s1
@@ -190,17 +180,17 @@ infer (k, t) = infer'
       let
         (T.Parameter alpha1') = alpha1
         (T.Parameter alpha2') = alpha2
-        (k3, s3) =
-          unify
-            ( k2
-                `Map.union` Map.fromList
-                  [ (alpha1', T.Universal)
-                  , (alpha2', T.RecordKind (Map.singleton l alpha1) Map.empty)
-                  ]
-            )
-            [ (alpha1, tau2)
-            , (alpha2, apply s2 tau1)
-            ]
+      (k3, s3) <-
+        unify
+          ( k2
+              `Map.union` Map.fromList
+                [ (alpha1', T.Universal)
+                , (alpha2', T.RecordKind (Map.singleton l alpha1) Map.empty)
+                ]
+          )
+          [ (alpha1, tau2)
+          , (alpha2, apply s2 tau1)
+          ]
       return
         ( k3
         , s3 `composeSubs` s2 `composeSubs` s1
@@ -239,15 +229,15 @@ infer (k, t) = infer'
     let
       (T.Parameter alpha1') = alpha1
       (T.Parameter alpha2') = alpha2
-      (k2, s2) =
-        unify
-          ( k1
-              `Map.union` Map.fromList
-                [ (alpha1', T.Universal)
-                , (alpha2', T.RecordKind (Map.singleton l alpha1) Map.empty)
-                ]
-          )
-          [(alpha2, tau1)]
+    (k2, s2) <-
+      unify
+        ( k1
+            `Map.union` Map.fromList
+              [ (alpha1', T.Universal)
+              , (alpha2', T.RecordKind (Map.singleton l alpha1) Map.empty)
+              ]
+        )
+        [(alpha2, tau1)]
     return
       ( k2
       , s2 `composeSubs` s1
@@ -266,17 +256,17 @@ infer (k, t) = infer'
     let
       (T.Parameter alpha1') = alpha1
       (T.Parameter alpha2') = alpha2
-      (k3, s3) =
-        unify
-          ( k2
-              `Map.union` Map.fromList
-                [ (alpha1', T.Universal)
-                , (alpha2', T.RecordKind Map.empty (Map.singleton l alpha1))
-                ]
-          )
-          [ (alpha1, tau2)
-          , (alpha2, apply s2 tau1)
-          ]
+    (k3, s3) <-
+      unify
+        ( k2
+            `Map.union` Map.fromList
+              [ (alpha1', T.Universal)
+              , (alpha2', T.RecordKind Map.empty (Map.singleton l alpha1))
+              ]
+        )
+        [ (alpha1, tau2)
+        , (alpha2, apply s2 tau1)
+        ]
     return
       ( k3
       , s3 `composeSubs` s2 `composeSubs` s1

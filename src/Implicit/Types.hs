@@ -1,6 +1,8 @@
 module Implicit.Types where
 
 import Control.Lens
+import Control.Monad.State
+
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 
@@ -121,3 +123,13 @@ instance Types T.KindedType where
 instance (Types a) => Types (a, a) where
   ftv (t1, t2) = ftv t1 `Set.union` ftv t2
   apply substitution (t1, t2) = (apply substitution t1, apply substitution t2)
+
+type TIState = Int
+type TI a = State TIState a
+type TypeEnv = (KindAssignment, TypeAssignment)
+
+freshType :: TI T.Type
+freshType = do
+  i <- get
+  put $ i + 1
+  return $ T.Parameter $ "_s" ++ show (i + 1)

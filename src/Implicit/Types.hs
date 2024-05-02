@@ -44,11 +44,15 @@ instance Types T.Type where
       | otherwise = T.Parameter p
     sub (T.Arrow t1 t2) = T.Arrow (sub t1) (sub t2)
     sub (T.Record m) = T.Record $ fmap sub m
-    sub (T.ForAll (t, k) t')
-      | substitution & has (ix t) =
-          let substitution' = Map.delete t substitution
-           in T.ForAll (t, k) $ apply substitution' t'
-      | otherwise = T.ForAll (t, k) $ sub t'
+    sub (T.ForAll (x, k) t)
+      | substitution & has (ix x) =
+          case substitution Map.! x of
+            T.Parameter x' -> T.ForAll (x', k') $ apply substitution t
+            _ ->
+              let substitution' = Map.delete x substitution
+               in T.ForAll (x, k') $ apply substitution' t
+      | otherwise = T.ForAll (x, k') $ sub t
+      where k' = apply substitution k
     sub (T.Contraction t1 l t2) = T.Contraction (sub t1) l (sub t2)
     sub (T.Extension t1 l t2) = T.Extension (sub t1) l (sub t2)
 

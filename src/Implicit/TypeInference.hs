@@ -26,11 +26,12 @@ generalize {} s1 == ([s1], s1)
 generalize {x: ([], s1)} (s1 -> s2) == ([s2], s1 -> s2)
 @
 -}
-generalize :: KindAssignment -> TypeAssignment -> T.Type -> Scheme
-generalize kindAssign typeAssign t = Scheme params t'
+generalize :: KindAssignment -> TypeAssignment -> T.Type -> (KindAssignment, Scheme)
+generalize kindAssign typeAssign t = (kindAssign', Scheme params t')
  where
   params = Set.toList (ftv t Set.\\ ftv typeAssign)
   t' = foldl (\acc v -> T.ForAll (v, kindAssign Map.! v) acc) t (Set.toList $ ftv t)
+  kindAssign' = Map.filterWithKey (\k _ -> k `notElem` params) kindAssign
 
 {- | Replaces all bound type variables in a type scheme with fresh type variables.
 
@@ -206,18 +207,22 @@ infer (k, t) = infer'
   infer' (Let x m1 m2) =
     do
       (k1, s1, m1', tau1) <- infer' m1
-      let sigma = generalize k1 (apply s1 t) tau1
+      let (k1', sigma) = generalize k1 (apply s1 t) tau1
       (k2, s2, m2', tau2) <-
         infer
-          ( k1
+          ( k1'
           , apply s1 t `Map.union` Map.singleton x sigma
           )
           m2
-      (sigma', _) <- instantiate sigma
+      (sigma', s3) <- instantiate sigma
       return
         ( k2
-        , s1 `composeSubs` s2
-        , E.Let x (apply s2 sigma') (E.Poly m1' (apply s2 sigma')) m2'
+        , s1 `composeSubs` s2 `composeSubs` s3
+        , E.Let
+            x
+            (apply (s2 `composeSubs` s3) sigma')
+            (E.Poly (apply (s2 `composeSubs` s3) m1') (apply (s2 `composeSubs` s3) sigma'))
+            m2'
         , tau2
         )
 

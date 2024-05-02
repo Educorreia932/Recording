@@ -241,7 +241,10 @@ infer (k, t) = infer'
     return
       ( k2
       , s2 `composeSubs` s1
-      , E.Contract m1' (apply s2 tau1) l
+      , E.Contract
+          (apply s2 m1')
+          (apply s2 alpha2)
+          l
       , apply s2 (T.Contraction alpha2 l alpha1)
       )
 
@@ -270,7 +273,11 @@ infer (k, t) = infer'
     return
       ( k3
       , s3 `composeSubs` s2 `composeSubs` s1
-      , E.Extend m1' (apply s3 tau1) l m2'
+      , E.Extend
+          (apply (s2 `composeSubs` s3) m1')
+          (apply s3 alpha2)
+          l
+          (apply s3 m2')
       , apply s3 (T.Extension alpha2 l alpha1)
       )
 

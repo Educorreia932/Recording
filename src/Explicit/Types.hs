@@ -20,7 +20,7 @@ instance Show Kind where
 
 type KindedType = (String, Kind)
 
-data TypeModification = TypeContraction | TypeExtension
+data TypeModification = TypeContraction | TypeExtension deriving (Eq)
 
 data Type
     = Int
@@ -29,8 +29,8 @@ data Type
     | Arrow Type Type
     | Record Fields
     | ForAll KindedType Type
-    | Extension Type String Type
     | Contraction Type String Type
+    | Extension Type String Type
     deriving (Eq, Ord)
 
 instance Show Type where
@@ -40,8 +40,8 @@ instance Show Type where
     show (Arrow t1 t2) = "(" ++ show t1 ++ " -> " ++ show t2 ++ ")"
     show (ForAll (t, k) t') = "∀" ++ t ++ "::" ++ show k ++ "." ++ show t'
     show (Record m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }"
-    show (Extension t1 l t2) = show t1 ++ " + { " ++ l ++ ": " ++ show t2 ++ "}"
     show (Contraction t1 l t2) = show t1 ++ " - { " ++ l ++ ": " ++ show t2 ++ "}"
+    show (Extension t1 l t2) = show t1 ++ " + { " ++ l ++ ": " ++ show t2 ++ "}"
 
 -- Retrieves all (type, kind) pairs from a polymorphic type
 typeParameters :: Type -> [KindedType]
@@ -75,3 +75,22 @@ contractions _ = Map.empty
 extensions :: Type -> Map.Map String Type
 extensions (Extension t l t') = Map.insert l t' $ extensions t
 extensions _ = Map.empty
+
+typeModifications :: Type -> [(TypeModification, String, Type)]
+typeModifications (Contraction t l t') = (TypeContraction, l, t') : typeModifications t
+typeModifications (Extension t l t') = (TypeExtension, l, t') : typeModifications t
+typeModifications _ = []
+
+replaceRoot :: Type -> Type -> Type
+replaceRoot (Contraction x l t') x' = Contraction (replaceRoot x x') l t'
+replaceRoot (Extension x l t') x' = Extension (replaceRoot x x') l t'
+replaceRoot _ t = t
+
+removeTypeModification :: Type -> (TypeModification, String) -> Type
+removeTypeModification (Contraction t l t') (TypeContraction, l')
+    | l == l' = t
+    | otherwise = Contraction (removeTypeModification t (TypeContraction, l')) l t'
+removeTypeModification (Extension t l t') (TypeExtension, l')
+    | l == l' = t
+    | otherwise = Extension (removeTypeModification t (TypeExtension, l')) l t'
+removeTypeModification t _ = t

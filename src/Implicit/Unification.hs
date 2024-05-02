@@ -102,7 +102,83 @@ unifyStep' (u, k, s) (ui, ki) =
                         , k
                         , s
                         )
-        _ -> Nothing
+        --- (VII)
+        ((chi, T.Parameter x), (x', T.RecordKind f1l f1r))
+            | x == x' -> unifyStep' (u, k, s) ((T.Parameter x, chi), (x', T.RecordKind f1l f1r))
+        ((T.Parameter x, chi), (x', T.RecordKind f1l f1r))
+            | x == x' ->
+                let T.Parameter chi' = T.root chi
+                 in case Map.lookup chi' k of
+                        Just (T.RecordKind f2l f2r)
+                            | Map.keysSet f1l `Set.disjoint` Map.keysSet (T.contractions chi)
+                                && Map.keysSet f1r
+                                    `Set.disjoint` Map.keysSet
+                                        ( f2r `Map.union` (f2l `Map.difference` T.contractions chi)
+                                        )
+                                && x `Set.member` ftv chi ->
+                                let s' = Map.singleton x chi
+                                    u' = Set.delete ui u
+                                    k' = Map.delete x k
+                                 in return $
+                                        Just
+                                            ( apply s' u'
+                                            , apply s' k'
+                                            , s `composeSubs` s'
+                                            )
+                        _ -> return Nothing
+        --- (VIII)
+        ((t1, t2), _)
+            | not $ null tm ->
+                return $
+                    let u' = Set.delete ui u
+                        (xi, li, (taui, tauj)) = head tm
+                        ui' = fmap (\t -> T.removeTypeModification t (xi, li)) ui
+                     in Just
+                            ( u' `Set.union` Set.fromList [(taui, tauj), ui']
+                            , k
+                            , s
+                            )
+          where
+            tm1 = T.typeModifications t1
+            tm2 = T.typeModifications t2
+            tm = [(x1, x2, (x3, y3)) | (x1, x2, x3) <- tm1, (y1, y2, y3) <- tm2, x1 == y1 && x2 == y2]
+        --- (IX)
+        ((t1, t2), (x1, T.RecordKind f1l f1r))
+            | T.root (T.Parameter x1) == T.root t2 -> unifyStep' (u, k, s) ((t2, t1), (x1, T.RecordKind f1l f1r))
+        ((t1, t2), (x1, T.RecordKind f1l f1r))
+            | T.root (T.Parameter x1) == T.root t1 ->
+                case Map.lookup alpha2 k of
+                    Just (T.RecordKind f2l f2r)
+                        | Map.keysSet f1l `Set.disjoint` Map.keysSet f2r
+                            && Map.keysSet f1r `Set.disjoint` Map.keysSet f2l
+                            && not (alpha1 `Set.member` ftv t2)
+                            && not (alpha2 `Set.member` ftv t1)
+                            && all (\((_, l1, _), (_, l2, _)) -> l1 /= l2) (zip (T.typeModifications t1) (T.typeModifications t2)) -> do
+                            alpha <- freshType
+                            let
+                                (T.Parameter alpha') = alpha
+                                s' =
+                                    Map.fromList
+                                        [ (alpha1, T.replaceRoot t2 (T.Parameter alpha'))
+                                        , (alpha2, T.replaceRoot t1 (T.Parameter alpha'))
+                                        ]
+                                u' = Set.delete ui u
+                                us =
+                                    Set.fromList [(f1l Map.! l, f2l Map.! l) | l <- Map.keys f1l, l `Map.member` f2l]
+                                        `Set.union` Set.fromList [(f1r Map.! l, f2r Map.! l) | l <- Map.keys f1r, l `Map.member` f2r]
+                                k' = Map.delete alpha2 $ Map.delete alpha1 k
+                                ks = Map.singleton alpha' $ T.RecordKind (f1l `Map.union` f2l) (f1r `Map.union` f2r)
+                            return $
+                                Just
+                                    ( apply s' $ u' `Set.union` us
+                                    , apply s' $ k' `Map.union` ks
+                                    , s `composeSubs` s'
+                                    )
+                    _ -> return Nothing
+          where
+            T.Parameter alpha1 = T.root t1
+            T.Parameter alpha2 = T.root t2
+        _ -> return Nothing
 
 firstJustM :: (Monad m) => [m (Maybe a)] -> m (Maybe a)
 firstJustM [] = return Nothing

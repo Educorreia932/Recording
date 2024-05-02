@@ -34,12 +34,12 @@ instance Show Expression where
     show (String s) = show s
     show (Variable x) = x
     show (Abstraction x e2) = "λ" ++ x ++ " -> " ++ show e2
-    show (Application e1 e2) = "(" ++ show e1 ++ " " ++ show e2 ++ ")"
+    show (Application e1 e2) = "(" ++ show e1 ++ ") " ++ show e2 
     show (Let x e1 e2) = "let " ++ x ++ " = " ++ show e1 ++ " in " ++ show e2
     show (Record m) = "{ " ++ intercalate ", " (map show m) ++ " }"
     show (IndexExpression e i) = show e ++ "[" ++ showIndex i ++ "]"
     show (IndexAbstraction i e) = "λ" ++ i ++ " -> " ++ show e
-    show (IndexApplication e i) = "(" ++ show e ++ " " ++ showIndex i ++ ")"
+    show (IndexApplication e i) = "(" ++ show e ++ ") " ++ showIndex i
     show (Modify e1 i e2) = "modify(" ++ show e1 ++ ", " ++ showIndex i ++ ", " ++ show e2 ++ ")"
     show (Contraction e i) = show e ++ " \\\\ " ++ showIndex i
     show (Extend e1 i e2) = "extend(" ++ show e1 ++ ", " ++ showIndex i ++ ", " ++ show e2 ++ ")"

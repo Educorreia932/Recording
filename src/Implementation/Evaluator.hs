@@ -37,7 +37,7 @@ substituteIndex :: String -> Index -> Expression -> Index
 substituteIndex var i e =
     case i of
         Left _ -> i
-        Right (i', offset) -> case evaluate' e of
+        Right (i', offset) -> case evaluate e of
             -- Replace with a index literal
             Literal n
                 | var == i' -> Left $ n + offset
@@ -74,7 +74,7 @@ substitute var e = sub
              in Abstraction v' $ sub body'
         | otherwise = Abstraction v $ sub body
     sub (Application e1 e2) = Application (sub e1) (sub e2)
-    sub (IndexApplication e1 e2) = IndexApplication (sub e1) e2
+    sub (IndexApplication e1 i) = IndexApplication (sub e1) (substituteIndex var i e) 
     sub (IndexExpression e' i) = IndexExpression (sub e') (substituteIndex var i e)
     sub (Record m) = Record $ fmap sub m
     sub (Modify r i e') =
@@ -90,64 +90,70 @@ substitute var e = sub
             (substituteIndex var i e)
             (sub e2)
 
-evaluate' :: Expression -> Expression
--- Constants
-evaluate' (Literal n) = Literal n
-evaluate' (String s) = String s
--- Variable
-evaluate' (Variable v) = Variable v
--- Abstraction
-evaluate' (Abstraction v e) = Abstraction v e
--- Record
-evaluate' (Record m) = Record $ fmap evaluate' m
--- Index Abstraction
-evaluate' (IndexAbstraction i e) = IndexAbstraction i e
--- Modify
-evaluate' (Modify (Record r) i e) =
-    case i of
-        Left i' -> Record $ toList $ Seq.update (i' - 1) e $ Seq.fromList r
-        Right _ -> error "Not implemented"
-evaluate' (Modify{}) = error "Modifying non-record"
--- Let expression
-evaluate' (Let var e1 e2) = evaluate' $ substitute var e1 e2
--- Index expression
-evaluate' (IndexExpression e i) =
-    case i of
-        Left i' -> case evaluate' e of
-            Record m -> m !! (i' - 1)
-            _ -> error "Indexing non-record"
-        _ -> error "Invalid index"
--- Application
-evaluate' (Application fun arg) =
-    case evaluate' fun of
-        Abstraction var body -> evaluate' $ substitute var arg body
-        other -> Application other arg
--- Index application
-evaluate' (IndexApplication fun index) = case evaluate' fun of
-    IndexAbstraction i body ->
-        let s =
-                substitute
-                    i
-                    ( case index of
-                        Left index' -> Literal index'
-                        Right (index', _) -> String index'
-                    )
-                    body
-         in evaluate' s
-    other -> IndexApplication other index
--- Contraction
-evaluate' (Contraction e i) =
-    case i of
-        Left i' -> case evaluate' e of
-            Record r -> Record $ remove (i' - 1) r
-            _ -> error "Indexing non-record"
-        _ -> error "Invalid index"
--- Extend
-evaluate' (Extend e1 i e2) =
-    case i of
-        Left i' -> case evaluate' e1 of
-            Record r -> Record $ insertAt (i' - 1) r e2
-            _ -> error "Extend non-record"
-        _ -> error "Invalid index"
-evaluate :: String -> Expression
-evaluate = evaluate' . compile
+class Evaluable a where
+    evaluate :: a -> Expression
+
+instance Evaluable Expression where
+    evaluate :: Expression -> Expression
+    -- Constants
+    evaluate (Literal n) = Literal n
+    evaluate (String s) = String s
+    -- Variable
+    evaluate (Variable v) = Variable v
+    -- Abstraction
+    evaluate (Abstraction v e) = Abstraction v e
+    -- Record
+    evaluate (Record m) = Record $ fmap evaluate m
+    -- Index Abstraction
+    evaluate (IndexAbstraction i e) = IndexAbstraction i e
+    -- Modify
+    evaluate (Modify (Record r) i e) =
+        case i of
+            Left i' -> Record $ toList $ Seq.update (i' - 1) e $ Seq.fromList r
+            Right _ -> error "Not implemented"
+    evaluate (Modify{}) = error "Modifying non-record"
+    -- Let expression
+    evaluate (Let var e1 e2) = evaluate $ substitute var e1 e2
+    -- Index expression
+    evaluate (IndexExpression e i) =
+        case i of
+            Left i' -> case evaluate e of
+                Record m -> m !! (i' - 1)
+                _ -> error "Indexing non-record"
+            _ -> error "Invalid index"
+    -- Application
+    evaluate (Application fun arg) =
+        case evaluate fun of
+            Abstraction var body -> evaluate $ substitute var arg body
+            other -> Application other arg
+    -- Index application
+    evaluate (IndexApplication fun index) = case evaluate fun of
+        IndexAbstraction i body ->
+            let s =
+                    substitute
+                        i
+                        ( case index of
+                            Left index' -> Literal index'
+                            Right (index', _) -> String index'
+                        )
+                        body
+            in evaluate s
+        other -> IndexApplication other index
+    -- Contraction
+    evaluate (Contraction e i) =
+        case i of
+            Left i' -> case evaluate e of
+                Record r -> Record $ remove (i' - 1) r
+                _ -> error "Indexing non-record"
+            _ -> error "Invalid index"
+    -- Extend
+    evaluate (Extend e1 i e2) =
+        case i of
+            Left i' -> case evaluate e1 of
+                Record r -> Record $ insertAt (i' - 1) r e2
+                _ -> error "Extend non-record"
+            _ -> error "Invalid index"
+
+instance Evaluable String where
+    evaluate :: String -> Expression
+    evaluate = evaluate . compile

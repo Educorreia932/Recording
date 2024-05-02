@@ -152,7 +152,7 @@ instance Evaluable Expression where
     evaluate (Extend e1 i e2) =
         case i of
             Left i' -> case evaluate e1 of
-                Record r -> Record $ insertAt (i' - 1) r e2
+                Record r -> Record $ insertAt (i' - 1) r (evaluate e2)
                 _ -> error "Extend non-record"
             _ -> error "Invalid index"
 

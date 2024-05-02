@@ -50,7 +50,7 @@ unifyStep' (u, k, s) (ui, ki) =
                             && (Map.keysSet f1r `Set.disjoint` Map.keysSet f2l) ->
                             let s' = Map.singleton x1 (T.Parameter x2)
                                 u' = Set.delete ui u
-                                k' = Map.delete x1 k
+                                k' = Map.delete x2 $ Map.delete x1 k
                                 ul = Set.fromList [(f1l Map.! l, f2l Map.! l) | l <- Map.keys f1l, l `Map.member` f2l]
                                 ur = Set.fromList [(f1r Map.! l, f2r Map.! l) | l <- Map.keys f1r, l `Map.member` f2r]
                                 ks = Map.singleton x2 $ apply s' (T.RecordKind (f1l `Map.union` f2l) (f1r `Map.union` f2r))

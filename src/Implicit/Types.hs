@@ -1,6 +1,8 @@
 module Implicit.Types where
 
 import Control.Lens
+import Control.Monad.State
+
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 
@@ -28,8 +30,10 @@ instance Types T.Type where
   ftv T.String = Set.empty
   ftv (T.Parameter x) = Set.singleton x
   ftv (T.Arrow t1 t2) = ftv t1 `Set.union` ftv t2
-  ftv (T.Record m) = Set.unions $ fmap ftv m
+  ftv (T.Record m) = ftv m
   ftv (T.ForAll (l, _) t') = ftv t' Set.\\ Set.singleton l
+  ftv (T.Contraction t1 _ t2) = ftv t1 Set.\\ ftv t2
+  ftv (T.Extension t1 _ t2) = ftv t1 `Set.union` ftv t2
 
   apply substitution = sub
    where
@@ -40,11 +44,17 @@ instance Types T.Type where
       | otherwise = T.Parameter p
     sub (T.Arrow t1 t2) = T.Arrow (sub t1) (sub t2)
     sub (T.Record m) = T.Record $ fmap sub m
-    sub (T.ForAll (t, k) t')
-      | substitution & has (ix t) =
-          let substitution' = Map.delete t substitution
-           in T.ForAll (t, k) $ apply substitution' t'
-      | otherwise = T.ForAll (t, k) $ sub t'
+    sub (T.ForAll (x, k) t)
+      | substitution & has (ix x) =
+          case substitution Map.! x of
+            T.Parameter x' -> T.ForAll (x', k') $ apply substitution t
+            _ ->
+              let substitution' = Map.delete x substitution
+               in T.ForAll (x, k') $ apply substitution' t
+      | otherwise = T.ForAll (x, k') $ sub t
+      where k' = apply substitution k
+    sub (T.Contraction t1 l t2) = T.Contraction (sub t1) l (sub t2)
+    sub (T.Extension t1 l t2) = T.Extension (sub t1) l (sub t2)
 
 instance Types T.Kind where
   ftv T.Universal = Set.empty
@@ -117,3 +127,13 @@ instance Types T.KindedType where
 instance (Types a) => Types (a, a) where
   ftv (t1, t2) = ftv t1 `Set.union` ftv t2
   apply substitution (t1, t2) = (apply substitution t1, apply substitution t2)
+
+type TIState = Int
+type TI a = State TIState a
+type TypeEnv = (KindAssignment, TypeAssignment)
+
+freshType :: TI T.Type
+freshType = do
+  i <- get
+  put $ i + 1
+  return $ T.Parameter $ "_s" ++ show (i + 1)

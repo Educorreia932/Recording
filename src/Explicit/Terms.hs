@@ -32,5 +32,5 @@ instance Show Expression where
     show (Record m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ " = " ++ show v) $ Map.toAscList m) ++ " }"
     show (Dot e t x) = "(" ++ show e ++ " : " ++ show t ++ ")." ++ x
     show (Modify e1 t l e2) = "modify(" ++ show e1 ++ ": " ++ show t ++ ", " ++ l ++ ", " ++ show e2 ++ ")"
-    show (Contract e t l) = show e ++ " \\ " ++ l ++ ": " ++ show t
+    show (Contract e t l) = show e ++ ": " ++ show t ++ " \\\\ " ++ l 
     show (Extend e1 t l e2) = "extend(" ++ show e1 ++ ": " ++ show t ++ ", " ++ l ++ ", " ++ show e2 ++ ")"

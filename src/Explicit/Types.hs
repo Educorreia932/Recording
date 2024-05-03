@@ -94,3 +94,21 @@ removeTypeModification (Extension t l t') (TypeExtension, l')
     | l == l' = t
     | otherwise = Extension (removeTypeModification t (TypeExtension, l')) l t'
 removeTypeModification t _ = t
+
+-- | Normalizes a type by removing all contractions and extensions
+rewrite :: Type -> Type
+rewrite (Contraction t1@(Record r) l t2) = case Map.lookup l r of
+    Just _ -> Record $ Map.delete l r
+    Nothing -> Contraction t1 l t2
+rewrite (Extension t1@(Record r) l t2)
+    | null r = Record $ Map.singleton l t2
+    | otherwise = case Map.lookup l r of
+        Just _ -> Extension t1 l t2
+        Nothing -> Record $ Map.insert l t2 r
+rewrite (Contraction t1 l t2) = case rewrite t1 of
+    r@(Record _) -> rewrite $ Contraction r l t2
+    t -> Contraction t l t2
+rewrite (Extension t1 l t2) = case rewrite t1 of
+    r@(Record _) -> rewrite $ Extension r l t2
+    t -> Extension t l t2
+rewrite t = t

@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module Implicit.TypeInference where
+module Implicit.TypeInference (typeInference) where
 
 import Control.Monad.State
 import Data.Map qualified as Map
@@ -70,7 +70,7 @@ infer (k, t) = infer'
             ( k'
             , nullSubstitution
             , E.Variable x freshTypes
-            , apply substitution tau
+            , T.rewrite $ apply substitution tau
             )
 
   -- Abstraction
@@ -88,7 +88,7 @@ infer (k, t) = infer'
         ( k1
         , s1
         , E.Abstraction x (apply s1 alpha) m1'
-        , apply s1 alpha `T.Arrow` tau
+        , T.rewrite (apply s1 alpha) `T.Arrow` tau
         )
 
   -- Application
@@ -109,7 +109,7 @@ infer (k, t) = infer'
         , E.Application
             (apply (s2 `composeSubs` s3) m1')
             (apply s3 m2')
-        , apply s3 alpha
+        , T.rewrite $ apply s3 alpha
         )
 
   -- Record
@@ -143,7 +143,7 @@ infer (k, t) = infer'
             Map.fromList $
               zip
                 (Map.keys r)
-                (tau1 : map (\(_, _, _, taui) -> taui) fieldsInference)
+                (tau1 : map (\(_, _, _, taui) -> T.rewrite taui) fieldsInference)
         )
 
   -- Dot
@@ -200,7 +200,7 @@ infer (k, t) = infer'
             (apply s3 alpha2)
             l
             (apply s3 m2')
-        , apply s3 alpha2
+        , T.rewrite $ apply s3 alpha2
         )
 
   -- Let expression
@@ -210,7 +210,7 @@ infer (k, t) = infer'
       let (k1', sigma) = generalize k1 (apply s1 t) tau1
       (k2, s2, m2', tau2) <-
         infer
-          ( k1'
+          ( k1
           , apply s1 t `Map.union` Map.singleton x sigma
           )
           m2
@@ -250,15 +250,17 @@ infer (k, t) = infer'
           (apply s2 m1')
           (apply s2 alpha2)
           l
-      , apply s2 (T.Contraction alpha2 l alpha1)
+      , T.rewrite $ apply s2 (T.Contraction alpha2 l alpha1)
       )
 
   -- Extend
   infer' (Extend m1 l m2) = do
     (k1, s1, m1', tau1) <- infer' m1
     (k2, s2, m2', tau2) <- infer (k1, apply s1 t) m2
-    let T.Parameter tau1' = T.root tau1
-    when (tau1' `Set.member` ftv tau2) $ error "Type inference failed"
+    let chi = T.root tau1
+    case chi of
+      T.Parameter chi' -> when (chi' `Set.member` ftv tau2) $ error "Type inference failed"
+      _ -> return ()
     alpha1 <- freshType
     alpha2 <- freshType
     let
@@ -279,11 +281,11 @@ infer (k, t) = infer'
       ( k3
       , s3 `composeSubs` s2 `composeSubs` s1
       , E.Extend
-          (apply (s2 `composeSubs` s3) m1')
-          (apply s3 alpha2)
+          (apply (s3 `composeSubs` s2 `composeSubs` s1) m1')
+          (apply (s3 `composeSubs` s2 `composeSubs` s1) alpha2)
           l
           (apply s3 m2')
-      , apply s3 (T.Extension alpha2 l alpha1)
+      , T.rewrite $ apply s3 (T.Extension alpha2 l alpha1)
       )
 
 typeInference :: String -> (E.Expression, T.Type)

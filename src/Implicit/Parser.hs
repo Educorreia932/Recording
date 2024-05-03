@@ -2,140 +2,200 @@ module Implicit.Parser (parseExpression) where
 
 import Implicit.Terms
 
+import Control.Monad.State.Strict (runState)
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
-import Text.Parsec (alphaNum, many, parse, (<|>))
-import Text.Parsec.Char (letter, spaces)
-import Text.Parsec.Combinator (eof, sepBy)
-import Text.Parsec.Language (emptyDef)
-import Text.Parsec.String (Parser)
-import Text.Parsec.Token qualified as Token
-import Text.ParserCombinators.Parsec (try)
+import Data.Void (Void)
 
-lexer :: Token.TokenParser ()
-lexer =
-    Token.makeTokenParser
-        emptyDef
-            { Token.reservedOpNames = ["λ", "\\", ".", "->", "\\\\"]
-            , Token.reservedNames = []
-            }
+import Text.Megaparsec
+import Text.Megaparsec.Char
+import Text.Megaparsec.Char.Lexer qualified as L
+
+type Parser = Parsec Void String
+
+spaceConsumer :: Parser ()
+spaceConsumer =
+    L.space
+        space1
+        (L.skipLineComment "//")
+        (L.skipBlockComment "/*" "*/")
+
+reservedWords :: [String]
+reservedWords =
+    [ "let"
+    , "in"
+    , "modify"
+    , "extend"
+    , "difference"
+    , "union"
+    , "λ"
+    , "\\"
+    , "\\\\"
+    ]
+
+reservedWord :: String -> Parser ()
+reservedWord w = (lexeme . try) (string w *> notFollowedBy alphaNumChar)
 
 lexeme :: Parser a -> Parser a
-lexeme parser = parser <* spaces
+lexeme = L.lexeme spaceConsumer
+
+symbol :: String -> Parser String
+symbol = L.symbol spaceConsumer
 
 identifier :: Parser String
-identifier = lexeme $ do
-    first <- letter
-    rest <- many $ alphaNum
-    return (first : rest)
+identifier = (lexeme . try) (p >>= check)
+  where
+    p = some letterChar
+    check x
+        | x `elem` reservedWords = fail $ "Keyword " ++ show x ++ " cannot be an identifier"
+        | otherwise = return x
 
 parentheses :: Parser a -> Parser a
-parentheses = Token.parens lexer
+parentheses = between (symbol "(") (symbol ")")
+
+curlyBraces :: Parser a -> Parser a
+curlyBraces = between (symbol "{") (symbol "}")
 
 integer :: Parser Integer
-integer = lexeme $ Token.integer lexer
+integer = do
+    sign <- optional $ char '-'
+    number <- lexeme L.decimal
+    return $ case sign of
+        Just _ -> -number
+        Nothing -> number
 
 number :: Parser Expression
 number = integer <&> (Literal . fromIntegral)
 
-string :: Parser Expression
-string = lexeme $ Token.stringLiteral lexer <&> String
+text :: Parser Expression
+text = lexeme $ char '"' >> manyTill L.charLiteral (char '"') <&> String
 
 variable :: Parser Expression
 variable = identifier <&> Variable
 
 record :: Parser Expression
 record = do
-    _ <- Token.reservedOp lexer "{"
-    fields <- Map.fromList <$> (field `sepBy` Token.comma lexer)
-    _ <- Token.reservedOp lexer "}"
+    fields <- curlyBraces $ Map.fromList <$> (field `sepBy` lexeme (char ','))
     return (Record fields)
   where
     field = do
         k <- identifier
-        _ <- Token.reservedOp lexer ":"
+        _ <- lexeme $ char '='
         v <- term
         return (k, v)
 
 dotExpression :: Parser Expression
 dotExpression = do
-    _ <- Token.reservedOp lexer "("
-    e <- term
-    _ <- Token.reserved lexer ")"
-    _ <- Token.reservedOp lexer "."
-    Dot e <$> identifier
-
-modify :: Parser Expression
-modify = do
-    _ <- Token.reservedOp lexer "modify("
-    e1 <- term
-    _ <- Token.reserved lexer ","
-    l <- identifier
-    _ <- Token.reserved lexer ","
-    e2 <- term
-    _ <- Token.reserved lexer ")"
-    return $ Modify e1 l e2
+    e1 <-
+        variable
+            <|> record
+            <|> modify
+            <|> contract
+            <|> extend
+            <|> difference
+            <|> union
+            <|> parentheses term
+    _ <- lexeme $ char '.'
+    Dot e1 <$> identifier
 
 letExpression :: Parser Expression
 letExpression = do
-    _ <- Token.reserved lexer "let"
+    _ <- reservedWord "let"
     x <- identifier
-    _ <- Token.reservedOp lexer "="
+    _ <- lexeme $ char '='
     e1 <- term
-    _ <- Token.reserved lexer "in"
-    Let x e1 <$> term
+    _ <- reservedWord "in"
+    Let x e1 <$> expression
 
-contraction :: Parser Expression
-contraction = parentheses $ do
-    e <- term
-    _ <- Token.reservedOp lexer "\\\\"
+modify :: Parser Expression
+modify = do
+    _ <- reservedWord "modify"
+    parentheses $ do
+        e1 <- term
+        _ <- lexeme $ char ','
+        l <- identifier
+        _ <- lexeme $ char ','
+        Modify e1 l <$> term
+
+contract :: Parser Expression
+contract = do
+    e <-
+        variable
+            <|> record
+            <|> modify
+            <|> extend
+            <|> difference
+            <|> union
+            <|> parentheses term
+    _ <- reservedWord "\\\\"
     Contract e <$> identifier
 
 extend :: Parser Expression
 extend = do
-    _ <- Token.reservedOp lexer "extend("
-    e1 <- term
-    _ <- Token.reserved lexer ","
-    l <- identifier
-    _ <- Token.reserved lexer ","
-    e2 <- term
-    _ <- Token.reserved lexer ")"
-    return $ Extend e1 l e2
+    _ <- reservedWord "extend"
+    parentheses $ do
+        e1 <- term
+        _ <- lexeme $ char ','
+        l <- identifier
+        _ <- lexeme $ char ','
+        Extend e1 l <$> term
 
-lambda :: Parser Expression
-lambda = do
-    _ <- Token.reservedOp lexer "λ" <|> Token.reservedOp lexer "\\"
-    x <- identifier
-    _ <- Token.reservedOp lexer "->"
-    Abstraction x <$> term
+difference :: Parser Expression
+difference = do
+    _ <- reservedWord "difference"
+    parentheses $ do
+        e1 <- term
+        _ <- lexeme $ char ','
+        e2 <- record
+        let Record e2' = e2
+        return $ foldl (\acc (l, _) -> Contract acc l) e1 (Map.toList e2')
 
-term :: Parser Expression
-term =
-    lambda
-        <|> try contraction
-        <|> letExpression
-        <|> record
-        <|> modify
-        <|> extend
-        <|> try dotExpression
-        <|> application
-        <|> string
-        <|> variable
-        <|> number
+union :: Parser Expression
+union = do
+    _ <- reservedWord "union"
+    parentheses $ do
+        e1 <- term
+        _ <- lexeme $ char ','
+        e2 <- record
+        let Record e2' = e2
+        return $ foldl (\acc (l, v) -> Extend acc l v) e1 (Map.toList e2')
+
+abstraction :: Parser Expression
+abstraction = do
+    _ <- char 'λ' <|> char '\\'
+    vars <- lexeme $ some identifier
+    _ <- reservedWord "->"
+    e <- expression
+    return $ foldr Abstraction e vars
 
 application :: Parser Expression
 application = do
-    e1 <- parentheses term
-    Application e1 <$> term
+    es <- some term
+    return $ foldl1 Application es
 
-contents :: Parser a -> Parser a
-contents parser = do
-    Token.whiteSpace lexer
-    r <- parser
-    eof
-    return r
+term :: Parser Expression
+term =
+    text
+        <|> number
+        <|> letExpression
+        <|> abstraction
+        <|> modify
+        <|> extend
+        <|> difference
+        <|> union
+        <|> try dotExpression
+        <|> try contract
+        <|> variable
+        <|> record
+        <|> parentheses term
+
+expression :: Parser Expression
+expression = application
+
+parser :: Parser Expression
+parser = expression <* eof
 
 parseExpression :: String -> Expression
-parseExpression e = case parse (contents term) "<stdin>" e of
-    Left err -> error (show err)
-    Right expr -> expr
+parseExpression e = case parse parser "" e of
+    Left bundle -> error $ errorBundlePretty bundle
+    Right xs -> xs

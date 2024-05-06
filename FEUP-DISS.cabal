@@ -15,7 +15,6 @@ executable FEUP-DISS-exe
   import:           warnings
   main-is:          Main.hs
   other-modules:
-    Explicit.Parser
     Explicit.Terms
     Explicit.Types
     Implementation.Compilation
@@ -34,7 +33,7 @@ executable FEUP-DISS-exe
     , lens
     , mtl
     , ordered-containers
-    , parsec
+    , megaparsec
     , split
 
   hs-source-dirs:   src
@@ -42,7 +41,6 @@ executable FEUP-DISS-exe
 
 library FEUP-DISS-lib
   exposed-modules:
-    Explicit.Parser
     Explicit.Terms
     Explicit.Types
     Implementation.Compilation
@@ -60,7 +58,7 @@ library FEUP-DISS-lib
     , lens
     , mtl
     , ordered-containers
-    , parsec
+    , megaparsec
 
   hs-source-dirs:   src
   default-language: GHC2021
@@ -71,7 +69,6 @@ test-suite tests
   other-modules:
     CompilationTest
     EvaluatorTest
-    ImplicitParserTest
     ParserTest
     TypeInferenceTest
 

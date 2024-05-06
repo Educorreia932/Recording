@@ -37,19 +37,19 @@ testEvaluate =
                     (Literal 1)
                 , T.Record (Map.singleton "A" T.Int)
                 )
-                (typeInference "(λx -> { A: x }) 1")
+                (typeInference "(λx -> { A = x }) 1")
         , TestCase $
             assertEqual
                 "Let expression"
-                ( let t = T.ForAll ("_s1", T.Universal) (T.Parameter "_s1" `T.Arrow` T.Parameter "_s1")
+                ( let t = T.ForAll ("_s4", T.Universal) (T.Parameter "_s4" `T.Arrow` T.Parameter "_s4")
                    in Let
                         "id"
                         t
-                        (Poly (Abstraction "x" (T.Parameter "_s1") (Variable "x" [])) t)
+                        (Poly (Abstraction "x" (T.Parameter "_s4") (Variable "x" [])) t)
                         (Application (Variable "id" [T.Int]) (Literal 42))
                 , T.Int
                 )
-                (typeInference "let id = λx -> x in (id) 42")
+                (typeInference "let id = λx -> x in id 42")
         , TestCase $
             assertEqual
                 "Record"
@@ -64,7 +64,7 @@ testEvaluate =
                         , ("B", T.Int)
                         ]
                 )
-                (typeInference "{ A: 1, B: 2 }")
+                (typeInference "{ A = 1, B = 2 }")
         , TestCase $
             assertEqual
                 "Modify"
@@ -88,7 +88,7 @@ testEvaluate =
                       , t
                       )
                 )
-                (typeInference "modify({ A: 1, B: 2 }, A, 3)")
+                (typeInference "modify({ A = 1, B = 2 }, A, 3)")
         ]
 
 tests :: Test

@@ -2,7 +2,6 @@ module Implicit.Parser (parseExpression) where
 
 import Implicit.Terms
 
-import Control.Monad.State.Strict (runState)
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Void (Void)
@@ -59,10 +58,10 @@ curlyBraces = between (symbol "{") (symbol "}")
 integer :: Parser Integer
 integer = do
     sign <- optional $ char '-'
-    number <- lexeme L.decimal
+    n <- lexeme L.decimal
     return $ case sign of
-        Just _ -> -number
-        Nothing -> number
+        Just _ -> -n
+        Nothing -> n
 
 number :: Parser Expression
 number = integer <&> (Literal . fromIntegral)
@@ -87,14 +86,14 @@ record = do
 dotExpression :: Parser Expression
 dotExpression = do
     e1 <-
-        variable
+        parentheses expression
+            <|> variable
             <|> record
             <|> modify
             <|> contract
             <|> extend
             <|> difference
             <|> union
-            <|> parentheses term
     _ <- lexeme $ char '.'
     Dot e1 <$> identifier
 
@@ -103,7 +102,7 @@ letExpression = do
     _ <- reservedWord "let"
     x <- identifier
     _ <- lexeme $ char '='
-    e1 <- term
+    e1 <- expression
     _ <- reservedWord "in"
     Let x e1 <$> expression
 
@@ -120,13 +119,13 @@ modify = do
 contract :: Parser Expression
 contract = do
     e <-
-        variable
+        parentheses term
+            <|> variable
             <|> record
             <|> modify
             <|> extend
             <|> difference
             <|> union
-            <|> parentheses term
     _ <- reservedWord "\\\\"
     Contract e <$> identifier
 
@@ -170,25 +169,24 @@ abstraction = do
 
 application :: Parser Expression
 application = do
-    es <- some term
+    es <- some $ term <|> parentheses application 
     return $ foldl1 Application es
 
 term :: Parser Expression
-term = do 
+term =
     spaceConsumer
-    text
-        <|> number
-        <|> letExpression
-        <|> abstraction
-        <|> modify
-        <|> extend
-        <|> difference
-        <|> union
-        <|> try dotExpression
-        <|> try contract
-        <|> variable
-        <|> record
-        <|> parentheses term
+        >> text
+            <|> number
+            <|> letExpression
+            <|> try contract
+            <|> abstraction
+            <|> modify
+            <|> extend
+            <|> difference
+            <|> union
+            <|> try dotExpression
+            <|> variable
+            <|> record
 
 expression :: Parser Expression
 expression = application

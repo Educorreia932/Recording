@@ -35,6 +35,7 @@ executable FEUP-DISS-exe
     , ordered-containers
     , megaparsec
     , split
+    , repline
 
   hs-source-dirs:   src
   default-language: GHC2021

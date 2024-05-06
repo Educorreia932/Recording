@@ -174,7 +174,8 @@ application = do
     return $ foldl1 Application es
 
 term :: Parser Expression
-term =
+term = do 
+    spaceConsumer
     text
         <|> number
         <|> letExpression

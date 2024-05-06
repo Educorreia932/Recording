@@ -51,7 +51,7 @@ testEvaluate =
             assertEqual
                 "Application with free variable"
                 (Variable "y")
-                (evaluate' "(λx : Int -> (λx : Int -> x) y) 42")
+                (evaluate' "(λx -> (λx -> x) y) 42")
         , TestCase $
             assertEqual
                 "α-conversion"
@@ -61,7 +61,7 @@ testEvaluate =
             assertEqual
                 "Field access"
                 (Literal 433)
-                (evaluate' "({ Name = \"Joe\", Office = 433 }).Office")
+                (evaluate' "{ Name = \"Joe\", Office = 433 }.Office")
         , TestCase $
             assertEqual
                 "Modification"

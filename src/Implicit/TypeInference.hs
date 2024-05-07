@@ -29,9 +29,12 @@ generalize {x: ([], s1)} (s1 -> s2) == ([s2], s1 -> s2)
 generalize :: KindAssignment -> TypeAssignment -> T.Type -> (KindAssignment, Scheme)
 generalize kindAssign typeAssign t = (kindAssign', Scheme params t')
  where
-  params = Set.toList (ftv t Set.\\ ftv typeAssign)
+  params = Set.toList (eftv t Set.\\ eftv typeAssign)
   t' = foldl (\acc v -> T.ForAll (v, kindAssign Map.! v) acc) t (Set.toList $ ftv t)
   kindAssign' = Map.filterWithKey (\k _ -> k `notElem` params) kindAssign
+
+  eftv :: (Types a) => a -> Set.Set String
+  eftv x = foldl (\acc x' -> acc `Set.union` ftv (kindAssign Map.! x')) (ftv x) (Set.toList $ ftv t)
 
 {- | Replaces all bound type variables in a type scheme with fresh type variables.
 
@@ -65,7 +68,7 @@ infer (k, t) = infer'
               tau = T.concreteType tau'
           freshTypes <- mapM (const freshType) tauKindedTypes
           let substitution = Map.fromList $ zip (map fst tauKindedTypes) freshTypes
-              k' = k `Map.union` Map.fromList (apply substitution tauKindedTypes)
+              k' = k `Map.union` apply substitution (Map.fromList tauKindedTypes)
           return
             ( k'
             , nullSubstitution
@@ -100,12 +103,11 @@ infer (k, t) = infer'
       let (T.Parameter alpha') = alpha
       (k3, s3) <-
         unify
-          ( k2 `Map.union` Map.singleton alpha' T.Universal
-          )
+          (k2 `Map.union` Map.singleton alpha' T.Universal)
           [(apply s2 tau1, tau2 `T.Arrow` alpha)]
       return
         ( k3
-        , s3 `composeSubs` s2 `composeSubs` s1
+        , s1 `composeSubs` s2 `composeSubs` s3
         , E.Application
             (apply (s2 `composeSubs` s3) m1')
             (apply s3 m2')
@@ -166,7 +168,7 @@ infer (k, t) = infer'
           [(alpha2, tau1)]
       return
         ( k2
-        , s2 `composeSubs` s1
+        , s1 `composeSubs` s2
         , E.Dot (apply s2 m1') (apply s2 alpha2) l
         , apply s2 alpha1
         )
@@ -194,7 +196,7 @@ infer (k, t) = infer'
           ]
       return
         ( k3
-        , s3 `composeSubs` s2 `composeSubs` s1
+        , s1 `composeSubs` s2 `composeSubs` s3
         , E.Modify
             (apply (s2 `composeSubs` s3) m1')
             (apply s3 alpha2)
@@ -208,20 +210,20 @@ infer (k, t) = infer'
     do
       (k1, s1, m1', tau1) <- infer' m1
       let (k1', sigma) = generalize k1 (apply s1 t) tau1
+      (sigma', s3) <- instantiate sigma
       (k2, s2, m2', tau2) <-
         infer
           ( k1
-          , apply s1 t `Map.union` Map.singleton x sigma
+          , apply (s1 `composeSubs` s3) t `Map.union` Map.singleton x sigma
           )
           m2
-      (sigma', s3) <- instantiate sigma
       return
         ( k2
-        , s1 `composeSubs` s2 `composeSubs` s3
+        , s1 `composeSubs` s2
         , E.Let
             x
-            (apply (s2 `composeSubs` s3) sigma')
-            (E.Poly (apply (s2 `composeSubs` s3) m1') (apply (s2 `composeSubs` s3) sigma'))
+            (apply s2 sigma')
+            (E.Poly (apply (s2 `composeSubs` s3) m1') (apply s2 sigma'))
             m2'
         , tau2
         )
@@ -245,7 +247,7 @@ infer (k, t) = infer'
         [(alpha2, tau1)]
     return
       ( k2
-      , s2 `composeSubs` s1
+      , s1 `composeSubs` s2
       , E.Contract
           (apply s2 m1')
           (apply s2 alpha2)
@@ -279,10 +281,10 @@ infer (k, t) = infer'
         ]
     return
       ( k3
-      , s3 `composeSubs` s2 `composeSubs` s1
+      , s1 `composeSubs` s2 `composeSubs` s3
       , E.Extend
-          (apply (s3 `composeSubs` s2 `composeSubs` s1) m1')
-          (apply (s3 `composeSubs` s2 `composeSubs` s1) alpha2)
+          (apply (s1 `composeSubs` s2 `composeSubs` s3) m1')
+          (apply (s1 `composeSubs` s2 `composeSubs` s3) alpha2)
           l
           (apply s3 m2')
       , T.rewrite $ apply s3 (T.Extension alpha2 l alpha1)

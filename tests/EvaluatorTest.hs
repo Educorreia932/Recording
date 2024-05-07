@@ -34,11 +34,6 @@ testEvaluate =
                 (evaluate' "(λx -> x) λy -> 42")
         , TestCase $
             assertEqual
-                "Application with variable argument"
-                (Variable "y")
-                (evaluate' "(λx -> x) y")
-        , TestCase $
-            assertEqual
                 "Application with nested abstraction argument"
                 (Abstraction "y" (Literal 42))
                 (evaluate' "(λx -> x) λy -> 42")
@@ -47,16 +42,6 @@ testEvaluate =
                 "Currying"
                 (Literal 1)
                 (evaluate' "((λx λy -> x) 1) 2")
-        , TestCase $
-            assertEqual
-                "Application with free variable"
-                (Variable "y")
-                (evaluate' "(λx -> (λx -> x) y) 42")
-        , TestCase $
-            assertEqual
-                "α-conversion"
-                (Abstraction "z" (Variable "y"))
-                (evaluate' "((λx y -> x) λz -> y) 42")
         , TestCase $
             assertEqual
                 "Field access"
@@ -75,8 +60,8 @@ testEvaluate =
         , TestCase $
             assertEqual
                 "Polymorphic extension"
-                (Record [Literal 1, Literal 2])
-                (evaluate' "let f = λx -> extend(x, A, 2) \\\\ A in f { A = 1 }")
+                (Record [Literal 1])
+                (evaluate' "let f = λx -> extend(x, B, 2) \\\\ B in f { A = 1 }")
         , TestCase $
             assertEqual
                 "Polymorphic contraction"

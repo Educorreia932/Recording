@@ -4,6 +4,7 @@ import Data.Foldable (toList)
 import Data.Sequence qualified as Seq
 import Implementation.Compilation
 import Implementation.Terms
+import Debug.Trace
 
 remove :: Int -> [a] -> [a]
 remove _ [] = []
@@ -115,7 +116,8 @@ instance Evaluable Expression where
             Right _ -> error "Not implemented"
     evaluate (Modify{}) = error "Modifying non-record"
     -- Let expression
-    evaluate (Let var e1 e2) = evaluate $ substitute var e1 e2
+    evaluate (Let var e1 e2) = 
+        evaluate $ substitute var e1 e2
     -- Index expression
     evaluate (IndexExpression e i) =
         case i of
@@ -155,7 +157,3 @@ instance Evaluable Expression where
                 Record r -> Record $ insertAt (i' - 1) r (evaluate e2)
                 _ -> error "Extend non-record"
             _ -> error "Invalid index"
-
-instance Evaluable String where
-    evaluate :: String -> Expression
-    evaluate = evaluate . compile

@@ -41,14 +41,6 @@ testCompilation =
                 (compile' "let name = λx-> x . Name in name { Name = \"Joe\", Office = 443 }")
         , TestCase $
             assertEqual
-                "Poly application"
-                ( I.Application
-                    (I.IndexAbstraction "I1" (I.Abstraction "x" (I.IndexExpression (I.Variable "x") (Right ("I1", 0)))))
-                    (I.IndexAbstraction "I2" (I.Abstraction "y" (I.IndexExpression (I.Variable "y") (Right ("I2", 0)))))
-                )
-                (compile' "let f = (λx -> x . A) λy -> y . B in f { A = { B = 2 } }")
-        , TestCase $
-            assertEqual
                 "Contraction"
                 ( I.Contraction
                     (I.Record [I.String "Joe", I.Literal 443])

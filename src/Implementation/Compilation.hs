@@ -4,7 +4,7 @@ import Control.Monad.State
 import Data.Bifunctor (second)
 import Data.List (find)
 import Data.Map qualified as Map
-import Explicit.Parser
+import Debug.Trace
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
 import Implementation.Terms qualified as I
@@ -31,10 +31,10 @@ instance Indexable T.Kind where
 -- Calculates the offset of an index assignment for an extension/contraction type
 indexOffset :: String -> T.Type -> Int
 indexOffset l (T.Extension t1 l' _)
-   | l <= l' = 0
+   | l < l' = 0
    | otherwise = 1 + indexOffset l t1
 indexOffset l (T.Contraction t1 l' _)
-   | l <= l' = 0
+   | l < l' = 0
    | otherwise = -1 + indexOffset l t1
 indexOffset _ _ = 0
 
@@ -58,13 +58,13 @@ idx (l, T.Contraction t1 l' t2) indexAssign = case idx (l, t1) indexAssign of
    Just (Right (i', offset')) -> Just $ Right (i', offset' + offset)
    Nothing -> Nothing
   where
-   offset = if l' <= l then 1 else 0
+   offset = if l' < l then -1 else 0
 idx (l, T.Extension t1 l' t2) indexAssign = case idx (l, t1) indexAssign of
    Just (Left n) -> Just $ Left $ n + offset
    Just (Right (i', offset')) -> Just $ Right (i', offset' + offset)
    Nothing -> Nothing
   where
-   offset = if l' <= l then 1 else 0
+   offset = if l' < l then 1 else 0
 idx (l, t) indexAssign =
    find (\(_, idxType) -> idxType == (l, baseType t)) (Map.toList indexAssign)
       >>= \(i, _) -> Just $ Right (i, offset)
@@ -83,7 +83,7 @@ compile' (E.Variable x typeInstances)
          t = typeAssign Map.! x
          substitutionMap = Map.fromList $ zip (map (T.Parameter . fst) (T.typeParameters t)) typeInstances
          indexes = map (second (substitutionMap Map.!)) (indexSet t)
-      return $
+      return $ 
          foldl
             ( \acc (l, s') -> case idx (l, s') indexAssign of
                Just i -> I.IndexApplication acc i
@@ -180,9 +180,3 @@ instance Compilable E.Expression where
    compile e = evalState (compile' e) startState
      where
       startState = (Map.empty, Map.empty)
-
-instance Compilable String where
-   compile s = evalState (compile' expression) startState
-     where
-      startState = (Map.empty, Map.empty)
-      expression = parseExpression s

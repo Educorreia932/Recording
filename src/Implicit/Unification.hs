@@ -106,26 +106,27 @@ unifyStep' (u, k, s) (ui, ki) =
         ((chi, T.Parameter x), (x', T.RecordKind f1l f1r))
             | x == x' -> unifyStep' (u, k, s) ((T.Parameter x, chi), (x', T.RecordKind f1l f1r))
         ((T.Parameter x, chi), (x', T.RecordKind f1l f1r))
-            | x == x' ->
-                let T.Parameter chi' = T.root chi
-                 in case Map.lookup chi' k of
-                        Just (T.RecordKind f2l f2r)
-                            | Map.keysSet f1l `Set.disjoint` Map.keysSet (T.contractions chi)
-                                && Map.keysSet f1r
-                                    `Set.disjoint` Map.keysSet
-                                        ( f2r `Map.union` (f2l `Map.difference` T.contractions chi)
-                                        )
-                                && x `Set.member` ftv chi ->
-                                let s' = Map.singleton x chi
-                                    u' = Set.delete ui u
-                                    k' = Map.delete x k
-                                 in return $
-                                        Just
-                                            ( apply s' u'
-                                            , apply s' k'
-                                            , s `composeSubs` s'
-                                            )
-                        _ -> return Nothing
+            | x == x' && not (null (T.typeModifications chi)) ->
+                case T.root chi of
+                    T.Parameter chi' ->
+                        case Map.lookup chi' k of
+                            Just (T.RecordKind f2l f2r)
+                                | Map.keysSet f1l `Set.disjoint` Map.keysSet (T.contractions chi)
+                                    && Map.keysSet f1r
+                                        `Set.disjoint` Map.keysSet
+                                            (f2r `Map.union` (f2l `Map.difference` T.contractions chi))
+                                    && not (x `Set.member` ftv chi) ->
+                                    let s' = Map.singleton x chi
+                                        u' = Set.delete ui u
+                                        k' = Map.delete x k
+                                     in return $
+                                            Just
+                                                ( apply s' u'
+                                                , apply s' k'
+                                                , s `composeSubs` s'
+                                                )
+                            _ -> return Nothing
+                    _ -> return Nothing
         --- (VIII)
         ((t1, t2), _)
             | not $ null tm ->

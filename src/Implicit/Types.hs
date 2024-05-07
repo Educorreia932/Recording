@@ -6,6 +6,7 @@ import Control.Monad.State
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 
+import Data.Maybe (fromMaybe)
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
 
@@ -19,7 +20,7 @@ nullSubstitution :: Substitution
 nullSubstitution = Map.empty
 
 composeSubs :: Substitution -> Substitution -> Substitution
-composeSubs s1 s2 = Map.map (apply s1) s2 `Map.union` s1
+composeSubs s1 s2 = Map.map (apply s2) s1 `Map.union` s2
 
 class Types a where
   ftv :: a -> Set.Set String
@@ -52,7 +53,8 @@ instance Types T.Type where
               let substitution' = Map.delete x substitution
                in T.ForAll (x, k') $ apply substitution' t
       | otherwise = T.ForAll (x, k') $ sub t
-      where k' = apply substitution k
+     where
+      k' = apply substitution k
     sub (T.Contraction t1 l t2) = T.Contraction (sub t1) l (sub t2)
     sub (T.Extension t1 l t2) = T.Extension (sub t1) l (sub t2)
 
@@ -107,8 +109,20 @@ instance Types E.Expression where
 
 instance (Types a) => Types (Map.Map String a) where
   ftv = ftv . Map.elems
-  apply :: (Types a) => Substitution -> Map.Map String a -> Map.Map String a
-  apply substitution = Map.map (apply substitution)
+
+  apply substitution xs = Map.map (apply substitution) xs'
+   where
+    xs' =
+      Map.mapKeys
+        ( \k ->
+            fromMaybe
+              k
+              ( case Map.lookup k substitution of
+                  Just (T.Parameter x) -> Just x
+                  _ -> Nothing
+              )
+        )
+        xs
 
 instance (Types a, Ord a) => Types (Set.Set a) where
   ftv = foldr (Set.union . ftv) Set.empty

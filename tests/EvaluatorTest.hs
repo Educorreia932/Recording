@@ -1,15 +1,13 @@
 module EvaluatorTest where
 
-import System.Exit qualified as Exit
-import Test.HUnit (Test (TestCase, TestList), assertEqual)
-
 import Data.Map qualified as Map
-
 import Implementation.Compilation
 import Implementation.Evaluator
 import Implementation.Terms
 import Implicit.Parser
 import Implicit.TypeInference (typeInference)
+import System.Exit qualified as Exit
+import Test.HUnit (Test (TestCase, TestList), assertEqual)
 
 evaluate' :: String -> Expression
 evaluate' = evaluate . compile . fst . typeInference

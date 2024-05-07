@@ -1,11 +1,9 @@
 module Implicit.Parser (parseExpression) where
 
-import Implicit.Terms
-
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Void (Void)
-
+import Implicit.Terms
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import Text.Megaparsec.Char.Lexer qualified as L
@@ -169,7 +167,7 @@ abstraction = do
 
 application :: Parser Expression
 application = do
-    es <- some $ term <|> parentheses application 
+    es <- some $ term <|> parentheses application
     return $ foldl1 Application es
 
 term :: Parser Expression

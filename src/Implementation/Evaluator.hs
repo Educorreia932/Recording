@@ -2,9 +2,9 @@ module Implementation.Evaluator where
 
 import Data.Foldable (toList)
 import Data.Sequence qualified as Seq
+import Debug.Trace
 import Implementation.Compilation
 import Implementation.Terms
-import Debug.Trace
 
 remove :: Int -> [a] -> [a]
 remove _ [] = []
@@ -116,7 +116,7 @@ instance Evaluable Expression where
             Right _ -> error "Not implemented"
     evaluate (Modify{}) = error "Modifying non-record"
     -- Let expression
-    evaluate (Let var e1 e2) = 
+    evaluate (Let var e1 e2) =
         evaluate $ substitute var e1 e2
     -- Index expression
     evaluate (IndexExpression e i) =

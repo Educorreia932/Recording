@@ -1,13 +1,11 @@
 module TypeInferenceTest where
 
-import Test.HUnit
-
 import Data.Map qualified as Map
-
 import Explicit.Terms
 import Explicit.Types qualified as T
 import Implicit.TypeInference
 import Implicit.Types (Scheme (..))
+import Test.HUnit
 
 testEvaluate :: Test
 testEvaluate =

@@ -4,12 +4,12 @@ import Data.Bifunctor qualified
 import Data.Foldable (asum)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
-import Explicit.Types qualified as T
-
 import Debug.Trace
+import Explicit.Types qualified as T
 import Implicit.Types
 
 type UnificationState = (Set.Set TypePair, KindAssignment, Substitution)
+
 type TypePair = (T.Type, T.Type)
 
 unifyStep' :: UnificationState -> (TypePair, (String, T.Kind)) -> TI (Maybe UnificationState)
@@ -156,8 +156,7 @@ unifyStep' (u, k, s) (ui, ki) =
                             && not (alpha2 `Set.member` ftv t1)
                             && all (\((_, l1, _), (_, l2, _)) -> l1 /= l2) (zip (T.typeModifications t1) (T.typeModifications t2)) -> do
                             alpha <- freshType
-                            let
-                                (T.Parameter alpha') = alpha
+                            let (T.Parameter alpha') = alpha
                                 s' =
                                     Map.fromList
                                         [ (alpha1, T.replaceRoot t2 (T.Parameter alpha'))

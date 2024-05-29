@@ -12,7 +12,6 @@ import Implementation.Terms qualified as I
 type IndexType = (String, T.Type)
 
 type IndexAssignment = Map.Map String IndexType
-
 type TypeAssignment = Map.Map String T.Type
 
 class Indexable a where
@@ -32,18 +31,18 @@ instance Indexable T.Kind where
 
 -- Calculates the offset of an index assignment for an extension/contraction type
 indexOffset :: String -> T.Type -> Int
-indexOffset l (T.Extension t1 l' _)
-    | l < l' = 0
-    | otherwise = 1 + indexOffset l t1
 indexOffset l (T.Contraction t1 l' _)
-    | l < l' = 0
+    | l <= l' = 0
     | otherwise = -1 + indexOffset l t1
+indexOffset l (T.Extension t1 l' _)
+    | l <= l' = 0
+    | otherwise = 1 + indexOffset l t1
 indexOffset _ _ = 0
 
 -- Gets the base type for an extension/contraction type
 baseType :: T.Type -> T.Type
-baseType (T.Extension t _ _) = baseType t
 baseType (T.Contraction t _ _) = baseType t
+baseType (T.Extension t _ _) = baseType t
 baseType t = t
 
 insertionIndex :: [String] -> String -> Int
@@ -54,22 +53,17 @@ insertionIndex (x : xs) l
 
 -- Finds the index of a label in an index assignment
 idx :: IndexType -> IndexAssignment -> Maybe I.Index
+-- If it is a record, calculates the index of the label
 idx (l, T.Record r) _ = Just $ Left $ insertionIndex (Map.keys r) l
-idx (l, T.Contraction t1 l' t2) indexAssign = case idx (l, t1) indexAssign of
-    Just (Left n) -> Just $ Left $ n + offset
-    Just (Right (i', offset')) -> Just $ Right (i', offset' + offset)
+-- If it is a parameter, finds the index in the index assignment
+idx (l, t@(T.Parameter _)) indexAssign = case find (\(_, (l', t')) -> (l, t) == (l', t')) (Map.toList indexAssign) of
+    Just (i, _) -> Just $ Right (i, 0)
     Nothing -> Nothing
-  where
-    offset = if l' < l then -1 else 0
-idx (l, T.Extension t1 l' t2) indexAssign = case idx (l, t1) indexAssign of
-    Just (Left n) -> Just $ Left $ n + offset
-    Just (Right (i', offset')) -> Just $ Right (i', offset' + offset)
+-- Otherwise, it is an extension/contraction, calculates the index/offset of the label
+idx (l, t) indexAssign = case idx (l, baseType t) indexAssign of
+    Just (Left i) -> Just $ Left $ i + indexOffset l t
+    Just (Right (i, _)) -> Just $ Right (i, indexOffset l t)
     Nothing -> Nothing
-  where
-    offset = if l' < l then 1 else 0
-idx (l, t) indexAssign =
-    find (\(_, idxType) -> idxType == (l, baseType t)) (Map.toList indexAssign)
-        >>= \(i, _) -> Just $ Right (i, offset)
   where
     offset = indexOffset l t
 

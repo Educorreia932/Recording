@@ -5,7 +5,7 @@ import Implementation.Compilation
 import Implementation.Evaluator
 import Implementation.Terms
 import Implicit.Parser
-import Implicit.TypeInference (typeInference)
+import Explicit.TypeInference (typeInference)
 import System.Exit qualified as Exit
 import Test.HUnit (Test (TestCase, TestList), assertEqual)
 

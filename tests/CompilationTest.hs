@@ -6,7 +6,7 @@ import Explicit.Types qualified as T
 import Implementation.Compilation
 import Implementation.Terms qualified as I
 import Implicit.Parser
-import Implicit.TypeInference (typeInference)
+import Explicit.TypeInference (typeInference)
 import Test.HUnit
 
 compile' :: String -> I.Expression

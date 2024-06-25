@@ -1,12 +1,10 @@
-module Implicit.Unification where
+module Explicit.Unification where
 
 import Data.Bifunctor qualified
-import Data.Foldable (asum)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
-import Debug.Trace
 import Explicit.Types qualified as T
-import Implicit.Types
+import Explicit.Typing
 
 type UnificationState = (Set.Set TypePair, KindAssignment, Substitution)
 
@@ -155,9 +153,8 @@ unifyStep' (u, k, s) (ui, ki) =
                             && not (alpha1 `Set.member` ftv t2)
                             && not (alpha2 `Set.member` ftv t1)
                             && all (\((_, l1, _), (_, l2, _)) -> l1 /= l2) (zip (T.typeModifications t1) (T.typeModifications t2)) -> do
-                            alpha <- freshType
-                            let (T.Parameter alpha') = alpha
-                                s' =
+                            (_, alpha') <- freshType
+                            let s' =
                                     Map.fromList
                                         [ (alpha1, T.replaceRoot t2 (T.Parameter alpha'))
                                         , (alpha2, T.replaceRoot t1 (T.Parameter alpha'))
@@ -176,8 +173,12 @@ unifyStep' (u, k, s) (ui, ki) =
                                     )
                     _ -> return Nothing
           where
-            T.Parameter alpha1 = T.root t1
-            T.Parameter alpha2 = T.root t2
+            alpha1 = case T.root t1 of
+                T.Parameter x -> x
+                _ -> error "Unification failed"
+            alpha2 = case T.root t2 of
+                T.Parameter x -> x
+                _ -> error "Unification failed"
         _ -> return Nothing
 
 firstJustM :: (Monad m) => [m (Maybe a)] -> m (Maybe a)

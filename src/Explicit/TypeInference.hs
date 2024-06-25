@@ -1,16 +1,17 @@
-module Implicit.TypeInference (typeInference) where
+module Explicit.TypeInference (typeInference) where
 
 import Control.Monad (when)
 import Control.Monad.State
+import Data.Functor
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Data.Traversable
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
+import Explicit.Typing
+import Explicit.Unification
 import Implicit.Parser
 import Implicit.Terms
-import Implicit.Types
-import Implicit.Unification
 
 {- | Create a type scheme out of a type.
 
@@ -42,7 +43,7 @@ instantiate ([t1, t2], t1 -> t2) == (s1 -> s2, {(t1, s1), (t2, s2)})
 -}
 instantiate :: Scheme -> TI (T.Type, Substitution)
 instantiate (Scheme params t) = do
-    freshTypes <- mapM (const freshType) params
+    freshTypes <- mapM (const freshType) params <&> map fst
     let substitution = Map.fromList $ zip params freshTypes
         instantiated = apply substitution t
     return (instantiated, substitution)
@@ -61,7 +62,7 @@ infer (k, t) = infer'
                 do
                     let tauKindedTypes = T.typeParameters tau'
                         tau = T.concreteType tau'
-                    freshTypes <- mapM (const freshType) tauKindedTypes
+                    freshTypes <- mapM (const freshType) tauKindedTypes <&> map fst
                     let substitution = Map.fromList $ zip (map fst tauKindedTypes) freshTypes
                         k' = k `Map.union` apply substitution (Map.fromList tauKindedTypes)
                     return
@@ -74,8 +75,7 @@ infer (k, t) = infer'
     -- Abstraction
     infer' (Abstraction x m1) =
         do
-            alpha <- freshType
-            let (T.Parameter alpha') = alpha
+            (alpha, alpha') <- freshType
             (k1, s1, m1', tau) <-
                 infer
                     ( k `Map.union` Map.singleton alpha' T.Universal
@@ -94,8 +94,7 @@ infer (k, t) = infer'
         do
             (k1, s1, m1', tau1) <- infer' m1
             (k2, s2, m2', tau2) <- infer (k1, apply s1 t) m2
-            alpha <- freshType
-            let (T.Parameter alpha') = alpha
+            (alpha, alpha') <- freshType
             (k3, s3) <-
                 unify
                     (k2 `Map.union` Map.singleton alpha' T.Universal)
@@ -147,10 +146,8 @@ infer (k, t) = infer'
     infer' (Dot m1 l) =
         do
             (k1, s1, m1', tau1) <- infer' m1
-            alpha1 <- freshType
-            alpha2 <- freshType
-            let (T.Parameter alpha1') = alpha1
-                (T.Parameter alpha2') = alpha2
+            (alpha1, alpha1') <- freshType
+            (alpha2, alpha2') <- freshType
             (k2, s2) <-
                 unify
                     ( k1
@@ -172,10 +169,8 @@ infer (k, t) = infer'
         do
             (k1, s1, m1', tau1) <- infer' m1
             (k2, s2, m2', tau2) <- infer (k1, apply s1 t) m2
-            alpha1 <- freshType
-            alpha2 <- freshType
-            let (T.Parameter alpha1') = alpha1
-                (T.Parameter alpha2') = alpha2
+            (alpha1, alpha1') <- freshType
+            (alpha2, alpha2') <- freshType
             (k3, s3) <-
                 unify
                     ( k2
@@ -224,10 +219,8 @@ infer (k, t) = infer'
     -- Contract
     infer' (Contract m1 l) = do
         (k1, s1, m1', tau1) <- infer' m1
-        alpha1 <- freshType
-        alpha2 <- freshType
-        let (T.Parameter alpha1') = alpha1
-            (T.Parameter alpha2') = alpha2
+        (alpha1, alpha1') <- freshType
+        (alpha2, alpha2') <- freshType
         (k2, s2) <-
             unify
                 ( k1
@@ -255,10 +248,8 @@ infer (k, t) = infer'
         case chi of
             T.Parameter chi' -> when (chi' `Set.member` ftv tau2) $ error "Type inference failed"
             _ -> return ()
-        alpha1 <- freshType
-        alpha2 <- freshType
-        let (T.Parameter alpha1') = alpha1
-            (T.Parameter alpha2') = alpha2
+        (alpha1, alpha1') <- freshType
+        (alpha2, alpha2') <- freshType
         (k3, s3) <-
             unify
                 ( k2

@@ -1,4 +1,4 @@
-module Implicit.Types where
+module Explicit.Typing where
 
 import Control.Lens
 import Control.Monad.State
@@ -148,8 +148,9 @@ type TI a = State TIState a
 
 type TypeEnv = (KindAssignment, TypeAssignment)
 
-freshType :: TI T.Type
+freshType :: TI (T.Type, String)
 freshType = do
     i <- get
     put $ i + 1
-    return $ T.Parameter $ "_s" ++ show (i + 1)
+    let x = "t" ++ show i
+    return (T.Parameter x, x)

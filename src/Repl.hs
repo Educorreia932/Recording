@@ -4,7 +4,7 @@ import Control.Monad.IO.Class
 import Implementation.Compilation
 import Implementation.Evaluator
 import Implicit.Parser (parseExpression)
-import Implicit.TypeInference (typeInference)
+import Explicit.TypeInference (typeInference)
 import System.Console.Repline
 
 type Repl a = HaskelineT IO a

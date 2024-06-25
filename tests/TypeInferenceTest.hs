@@ -3,8 +3,8 @@ module TypeInferenceTest where
 import Data.Map qualified as Map
 import Explicit.Terms
 import Explicit.Types qualified as T
-import Implicit.TypeInference
-import Implicit.Types (Scheme (..))
+import Explicit.TypeInference
+import Explicit.Typing (Scheme (..))
 import Test.HUnit
 
 testEvaluate :: Test
@@ -18,8 +18,8 @@ testEvaluate =
         , TestCase $
             assertEqual
                 "Abstraction"
-                ( Abstraction "x" (T.Parameter "_s1") (Variable "x" [])
-                , T.Parameter "_s1" `T.Arrow` T.Parameter "_s1"
+                ( Abstraction "x" (T.Parameter "t0") (Variable "x" [])
+                , T.Parameter "t0" `T.Arrow` T.Parameter "t0"
                 )
                 (typeInference "λx -> x")
         , TestCase $
@@ -39,11 +39,11 @@ testEvaluate =
         , TestCase $
             assertEqual
                 "Let expression"
-                ( let t = T.ForAll ("_s2", T.Universal) (T.Parameter "_s2" `T.Arrow` T.Parameter "_s2")
+                ( let t = T.ForAll ("t1", T.Universal) (T.Parameter "t1" `T.Arrow` T.Parameter "t1")
                    in Let
                         "id"
                         t
-                        (Poly (Abstraction "x" (T.Parameter "_s2") (Variable "x" [])) t)
+                        (Poly (Abstraction "x" (T.Parameter "t1") (Variable "x" [])) t)
                         (Application (Variable "id" [T.Int]) (Literal 42))
                 , T.Int
                 )

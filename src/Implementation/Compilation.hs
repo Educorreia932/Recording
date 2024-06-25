@@ -4,7 +4,6 @@ import Control.Monad.State
 import Data.Bifunctor (second)
 import Data.List (find)
 import Data.Map qualified as Map
-import Debug.Trace
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
 import Implementation.Terms qualified as I

@@ -22,6 +22,7 @@
             haskell-language-server
             cabal-install
             haskellPackages.fourmolu
+            haskellPackages.cabal-fmt
           ];
         };
       });

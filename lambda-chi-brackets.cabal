@@ -1,0 +1,89 @@
+cabal-version:   3.0
+name:            lambda-chi-brackets
+version:         0.1.0.0
+license-file:    LICENSE
+author:          Eduardo Correia
+maintainer:      skelozard1@gmail.com
+category:        Language development
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
+
+source-repository head
+  type:     git
+  location: https://github.com/Educorreia932/FEUP-DISS
+
+common warnings
+  ghc-options: -Wall
+
+executable lambda-chi-brackets
+  import:           warnings
+  main-is:          Main.hs
+  other-modules:
+    Explicit.Terms
+    Explicit.TypeInference
+    Explicit.Types
+    Explicit.Typing
+    Explicit.Unification
+    Implementation.Compilation
+    Implementation.Evaluator
+    Implementation.Terms
+    Implicit.Parser
+    Implicit.Terms
+    Repl
+
+  build-depends:
+    , base                ^>=4.18.2.0
+    , containers
+    , lens
+    , megaparsec
+    , mtl
+    , ordered-containers
+    , repline
+    , split
+
+  hs-source-dirs:   src
+  default-language: GHC2021
+
+library
+  exposed-modules:
+    Explicit.Terms
+    Explicit.TypeInference
+    Explicit.Types
+    Explicit.Typing
+    Explicit.Unification
+    Implementation.Compilation
+    Implementation.Evaluator
+    Implementation.Terms
+    Implicit.Parser
+    Implicit.Terms
+
+  build-depends:
+    , base                ^>=4.18.2.0
+    , containers
+    , lens
+    , megaparsec
+    , mtl
+    , ordered-containers
+    , split
+
+  hs-source-dirs:   src
+  default-language: GHC2021
+
+test-suite lambda-chi-brackets-test
+  type:             exitcode-stdio-1.0
+  main-is:          Tests.hs
+  other-modules:
+    CompilationTest
+    EvaluatorTest
+    ParserTest
+    TypeInferenceTest
+
+  build-depends:
+    , base                 ^>=4.18.2.0
+    , containers
+    , HUnit                ^>=1.6
+    , lambda-chi-brackets
+    , ordered-containers
+
+  hs-source-dirs:   tests
+  default-language: GHC2021

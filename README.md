@@ -1,7 +1,8 @@
-# λχ[ ]
+<div align=center>
+   <img src="logo.png">
+</div>
 
-λχ[ ] is a polymorphic λ-calculus with support for records and operations to modify them. 
-This repository contains an Haskell implementation of the calculus and a REPL to interact with it.
+Recording is a REPL for a polymorphic $\lambda$-calculus with support for records and polymorphic operations over them.
 
 # Installation
 

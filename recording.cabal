@@ -1,21 +1,21 @@
 cabal-version:   3.0
-name:            lambda-chi-brackets
+name:            recording
 version:         0.1.0.0
 license-file:    LICENSE
 author:          Eduardo Correia
-maintainer:      skelozard1@gmail.com
+maintainer:      educorreia932@gmail.com
 category:        Language development
 build-type:      Simple
 extra-doc-files: CHANGELOG.md
 
 source-repository head
   type:     git
-  location: https://github.com/Educorreia932/FEUP-DISS
+  location: https://github.com/Educorreia932/Recording
 
 common warnings
   ghc-options: -Wall
 
-executable lambda-chi-brackets
+executable recording
   import:           warnings
   main-is:          Main.hs
   other-modules:
@@ -69,7 +69,7 @@ library
   hs-source-dirs:   src
   default-language: GHC2021
 
-test-suite lambda-chi-brackets-test
+test-suite recording-test
   type:             exitcode-stdio-1.0
   main-is:          Tests.hs
   other-modules:
@@ -82,7 +82,7 @@ test-suite lambda-chi-brackets-test
     , base                 ^>=4.18.2.0
     , containers
     , HUnit                ^>=1.6
-    , lambda-chi-brackets
+    , recording
     , ordered-containers
 
   hs-source-dirs:   tests

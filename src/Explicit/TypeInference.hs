@@ -1,16 +1,17 @@
 module Explicit.TypeInference (typeInference) where
 
 import Control.Monad (when)
+import Control.Monad.Except (runExceptT, throwError)
 import Control.Monad.State
 import Data.Functor
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Data.Traversable
+import Errors
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
 import Explicit.Typing
 import Explicit.Unification
-import Implicit.Parser
 import Implicit.Terms
 
 {- | Create a type scheme out of a type.
@@ -57,7 +58,7 @@ infer (k, t) = infer'
     -- Variable
     infer' (Variable x) =
         case Map.lookup x t of
-            Nothing -> error $ "Unbound variable: " ++ x
+            Nothing -> throwError $ TypeInferenceError $ "Unbound variable: " ++ x
             Just (Scheme _ tau') ->
                 do
                     let tauKindedTypes = T.typeParameters tau'
@@ -246,7 +247,10 @@ infer (k, t) = infer'
         (k2, s2, m2', tau2) <- infer (k1, apply s1 t) m2
         let chi = T.root tau1
         case chi of
-            T.Parameter chi' -> when (chi' `Set.member` ftv tau2) $ error "Type inference failed"
+            T.Parameter chi' ->
+                when (chi' `Set.member` ftv tau2) $
+                    throwError $
+                        TypeInferenceError "Type inference failed"
             _ -> return ()
         (alpha1, alpha1') <- freshType
         (alpha2, alpha2') <- freshType
@@ -272,7 +276,11 @@ infer (k, t) = infer'
             , T.rewrite $ apply s3 (T.Extension alpha2 l alpha1)
             )
 
-typeInference :: String -> (E.Expression, T.Type)
-typeInference s = (m, tau)
-  where
-    (_, _, m, tau) = evalState (infer (Map.empty, Map.empty) (parseExpression s)) 0
+typeInference :: Expression -> Either RecordingException (E.Expression, T.Type)
+typeInference expression = do
+    let initialState = (Map.empty, Map.empty)
+    let result = evalState (runExceptT (infer initialState expression)) 0
+    -- Handle the result
+    case result of
+        Left err -> Left err
+        Right (_, _, m, tau) -> Right (m, tau)

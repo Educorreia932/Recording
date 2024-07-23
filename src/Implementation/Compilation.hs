@@ -1,9 +1,11 @@
 module Implementation.Compilation (compile) where
 
+import Control.Monad.Except
 import Control.Monad.State
 import Data.Bifunctor (second)
 import Data.List (find)
 import Data.Map qualified as Map
+import Errors
 import Explicit.Terms qualified as E
 import Explicit.Types qualified as T
 import Implementation.Terms qualified as I
@@ -60,15 +62,15 @@ idx (l, t@(T.Parameter _)) indexAssign = case find (\(_, (l', t')) -> (l, t) == 
     Nothing -> Nothing
 -- Otherwise, it is an extension/contraction, calculates the index/offset of the label
 idx (l, t) indexAssign = case idx (l, baseType t) indexAssign of
-    Just (Left i) -> Just $ Left $ i + indexOffset l t
-    Just (Right (i, _)) -> Just $ Right (i, indexOffset l t)
+    Just (Left i) -> Just $ Left $ i + offset
+    Just (Right (i, _)) -> Just $ Right (i, offset)
     Nothing -> Nothing
   where
     offset = indexOffset l t
 
 type CompilationState = (IndexAssignment, TypeAssignment)
 
-compile' :: E.Expression -> State CompilationState I.Expression
+compile' :: E.Expression -> ExceptT RecordingException (State CompilationState) I.Expression
 -- Variable
 compile' (E.Variable x typeInstances)
     | null typeInstances = return $ I.Variable x
@@ -112,9 +114,9 @@ compile' (E.Record r) = do
 compile' (E.Dot e t l) = do
     c <- compile' e
     (indexAssign, _) <- get
-    let index = case idx (l, t) indexAssign of
-            Just i -> i
-            Nothing -> error $ "Label \"" ++ l ++ "\" not found in " ++ show t
+    index <- case idx (l, t) indexAssign of
+        Just i -> return i
+        Nothing -> throwError $ CompilationError $ "Label \"" ++ l ++ "\" not found in " ++ show t
     return $ I.IndexExpression c index
 
 -- Modify
@@ -122,9 +124,9 @@ compile' (E.Modify e1 t l e2) = do
     c1 <- compile' e1
     c2 <- compile' e2
     (indexAssign, _) <- get
-    let index = case idx (l, t) indexAssign of
-            Just i -> i
-            Nothing -> error $ "Label \"" ++ l ++ "\" not found in " ++ show t
+    index <- case idx (l, t) indexAssign of
+        Just i -> return i
+        Nothing -> throwError $ CompilationError $ "Label \"" ++ l ++ "\" not found in " ++ show t
     return $ I.Modify c1 index c2
 
 -- Generic
@@ -152,9 +154,9 @@ compile' (E.Let x t e1 e2) = do
 compile' (E.Contract e t l) = do
     c <- compile' e
     (indexAssign, _) <- get
-    let index = case idx (l, t) indexAssign of
-            Just i -> i
-            Nothing -> error $ "Label \"" ++ l ++ "\" not found in " ++ show t
+    index <- case idx (l, t) indexAssign of
+        Just i -> return i
+        Nothing -> throwError $ CompilationError $ "Label \"" ++ l ++ "\" not found in " ++ show t
     return $ I.Contraction c index
 
 -- Extend
@@ -162,15 +164,12 @@ compile' (E.Extend e1 t l e2) = do
     c1 <- compile' e1
     c2 <- compile' e2
     (indexAssign, _) <- get
-    let index = case idx (l, t) indexAssign of
-            Just i -> i
-            Nothing -> error $ "Label \"" ++ l ++ "\" not found in " ++ show t
+    index <- case idx (l, t) indexAssign of
+        Just i -> return i
+        Nothing -> throwError $ CompilationError $ "Label \"" ++ l ++ "\" not found in " ++ show t
     return $ I.Extend c1 index c2
 
-class Compilable a where
-    compile :: a -> I.Expression
-
-instance Compilable E.Expression where
-    compile e = evalState (compile' e) startState
-      where
-        startState = (Map.empty, Map.empty)
+compile :: E.Expression -> Either RecordingException I.Expression
+compile e = do
+    let initialState = (Map.empty, Map.empty)
+    evalState (runExceptT $ compile' e) initialState

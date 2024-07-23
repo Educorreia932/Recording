@@ -10,7 +10,9 @@ import System.Exit qualified as Exit
 import Test.HUnit (Test (TestCase, TestList), assertEqual)
 
 evaluate' :: String -> Expression
-evaluate' = evaluate . compile . fst . typeInference
+evaluate' input = case parseExpression input >>= typeInference >>= \(expr, _) -> compile expr >>= evaluate of
+    Left err -> error $ show err
+    Right expr -> expr
 
 testEvaluate :: Test
 testEvaluate =

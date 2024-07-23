@@ -3,6 +3,7 @@ module Implicit.Parser (parseExpression) where
 import Data.Functor ((<&>))
 import Data.Map qualified as Map
 import Data.Void (Void)
+import Errors (RecordingException (ParseError))
 import Implicit.Terms
 import Text.Megaparsec
 import Text.Megaparsec.Char
@@ -192,7 +193,7 @@ expression = application
 parser :: Parser Expression
 parser = expression <* eof
 
-parseExpression :: String -> Expression
+parseExpression :: String -> Either RecordingException Expression
 parseExpression e = case parse parser "" e of
-    Left bundle -> error $ errorBundlePretty bundle
-    Right xs -> xs
+    Left bundle -> Left $ ParseError $ errorBundlePretty bundle
+    Right xs -> Right xs

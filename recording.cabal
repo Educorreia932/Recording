@@ -1,89 +1,85 @@
 cabal-version:   3.0
 name:            recording
-version:         0.1.0.0
+version:         1.1.0.0
 license-file:    LICENSE
-author:          Eduardo Correia
 maintainer:      educorreia932@gmail.com
+author:          Eduardo Correia
 category:        Language development
 build-type:      Simple
 extra-doc-files: CHANGELOG.md
 
 source-repository head
-  type:     git
-  location: https://github.com/Educorreia932/Recording
-
-common warnings
-  ghc-options: -Wall
-
-executable recording
-  import:           warnings
-  main-is:          Main.hs
-  other-modules:
-    Explicit.Terms
-    Explicit.TypeInference
-    Explicit.Types
-    Explicit.Typing
-    Explicit.Unification
-    Implementation.Compilation
-    Implementation.Evaluator
-    Implementation.Terms
-    Implicit.Parser
-    Implicit.Terms
-    Repl
-
-  build-depends:
-    , base                ^>=4.18.2.0
-    , containers
-    , lens
-    , megaparsec
-    , mtl
-    , ordered-containers
-    , repline
-    , split
-
-  hs-source-dirs:   src
-  default-language: GHC2021
+    type:     git
+    location: https://github.com/Educorreia932/Recording
 
 library
-  exposed-modules:
-    Explicit.Terms
-    Explicit.TypeInference
-    Explicit.Types
-    Explicit.Typing
-    Explicit.Unification
-    Implementation.Compilation
-    Implementation.Evaluator
-    Implementation.Terms
-    Implicit.Parser
-    Implicit.Terms
+    exposed-modules:
+        Explicit.Terms
+        Explicit.TypeInference
+        Explicit.Types
+        Explicit.Typing
+        Explicit.Unification
+        Implementation.Compilation
+        Implementation.Evaluator
+        Implementation.Terms
+        Implicit.Parser
+        Implicit.Terms
+        Errors
 
-  build-depends:
-    , base                ^>=4.18.2.0
-    , containers
-    , lens
-    , megaparsec
-    , mtl
-    , ordered-containers
-    , split
+    hs-source-dirs:   src
+    default-language: GHC2021
+    build-depends:
+        base ^>=4.18.2.0,
+        containers,
+        lens,
+        megaparsec,
+        mtl,
+        ordered-containers,
+        split
 
-  hs-source-dirs:   src
-  default-language: GHC2021
+executable recording
+    main-is:          Main.hs
+    hs-source-dirs:   src
+    other-modules:
+        Explicit.Terms
+        Explicit.TypeInference
+        Explicit.Types
+        Explicit.Typing
+        Explicit.Unification
+        Implementation.Compilation
+        Implementation.Evaluator
+        Implementation.Terms
+        Implicit.Parser
+        Implicit.Terms
+        Errors
+        Repl
+
+    default-language: GHC2021
+    ghc-options:      -Wall
+    build-depends:
+        base ^>=4.18.2.0,
+        containers,
+        lens,
+        megaparsec,
+        mtl,
+        ordered-containers,
+        repline,
+        split
 
 test-suite recording-test
-  type:             exitcode-stdio-1.0
-  main-is:          Tests.hs
-  other-modules:
-    CompilationTest
-    EvaluatorTest
-    ParserTest
-    TypeInferenceTest
+    type:             exitcode-stdio-1.0
+    main-is:          Tests.hs
+    hs-source-dirs:   tests
+    other-modules:
+        CompilationTest
+        EvaluatorTest
+        ParserTest
+        TypeInferenceTest
 
-  build-depends:
-    , base                 ^>=4.18.2.0
-    , containers
-    , HUnit                ^>=1.6
-    , recording
-    , ordered-containers
-
-  hs-source-dirs:   tests
-  default-language: GHC2021
+    default-language: GHC2021
+    build-depends:
+        base ^>=4.18.2.0,
+        containers,
+        HUnit ^>=1.6,
+        recording,
+        ordered-containers

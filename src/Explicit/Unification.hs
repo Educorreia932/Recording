@@ -1,8 +1,10 @@
 module Explicit.Unification where
 
+import Control.Monad.Except
 import Data.Bifunctor qualified
 import Data.Map qualified as Map
 import Data.Set qualified as Set
+import Errors
 import Explicit.Types qualified as T
 import Explicit.Typing
 
@@ -146,39 +148,36 @@ unifyStep' (u, k, s) (ui, ki) =
             | T.root (T.Parameter x1) == T.root t2 -> unifyStep' (u, k, s) ((t2, t1), (x1, T.RecordKind f1l f1r))
         ((t1, t2), (x1, T.RecordKind f1l f1r))
             | T.root (T.Parameter x1) == T.root t1 ->
-                case Map.lookup alpha2 k of
-                    Just (T.RecordKind f2l f2r)
-                        | Map.keysSet f1l `Set.disjoint` Map.keysSet f2r
-                            && Map.keysSet f1r `Set.disjoint` Map.keysSet f2l
-                            && not (alpha1 `Set.member` ftv t2)
-                            && not (alpha2 `Set.member` ftv t1)
-                            && all (\((_, l1, _), (_, l2, _)) -> l1 /= l2) (zip (T.typeModifications t1) (T.typeModifications t2)) -> do
-                            (_, alpha') <- freshType
-                            let s' =
-                                    Map.fromList
-                                        [ (alpha1, T.replaceRoot t2 (T.Parameter alpha'))
-                                        , (alpha2, T.replaceRoot t1 (T.Parameter alpha'))
-                                        ]
-                                u' = Set.delete ui u
-                                us =
-                                    Set.fromList [(f1l Map.! l, f2l Map.! l) | l <- Map.keys f1l, l `Map.member` f2l]
-                                        `Set.union` Set.fromList [(f1r Map.! l, f2r Map.! l) | l <- Map.keys f1r, l `Map.member` f2r]
-                                k' = Map.delete alpha2 $ Map.delete alpha1 k
-                                ks = Map.singleton alpha' $ T.RecordKind (f1l `Map.union` f2l) (f1r `Map.union` f2r)
-                            return $
-                                Just
-                                    ( apply s' $ u' `Set.union` us
-                                    , apply s' $ k' `Map.union` ks
-                                    , s `composeSubs` s'
-                                    )
-                    _ -> return Nothing
-          where
-            alpha1 = case T.root t1 of
-                T.Parameter x -> x
-                _ -> error "Unification failed"
-            alpha2 = case T.root t2 of
-                T.Parameter x -> x
-                _ -> error "Unification failed"
+                case (T.root t1, T.root t2) of
+                    -- Roots must be type variables
+                    (T.Parameter alpha1, T.Parameter alpha2) ->
+                        case Map.lookup alpha2 k of
+                            Just (T.RecordKind f2l f2r)
+                                | Map.keysSet f1l `Set.disjoint` Map.keysSet f2r
+                                    && Map.keysSet f1r `Set.disjoint` Map.keysSet f2l
+                                    && not (alpha1 `Set.member` ftv t2)
+                                    && not (alpha2 `Set.member` ftv t1)
+                                    && all (\((_, l1, _), (_, l2, _)) -> l1 /= l2) (zip (T.typeModifications t1) (T.typeModifications t2)) -> do
+                                    (_, alpha') <- freshType
+                                    let s' =
+                                            Map.fromList
+                                                [ (alpha1, T.replaceRoot t2 (T.Parameter alpha'))
+                                                , (alpha2, T.replaceRoot t1 (T.Parameter alpha'))
+                                                ]
+                                        u' = Set.delete ui u
+                                        us =
+                                            Set.fromList [(f1l Map.! l, f2l Map.! l) | l <- Map.keys f1l, l `Map.member` f2l]
+                                                `Set.union` Set.fromList [(f1r Map.! l, f2r Map.! l) | l <- Map.keys f1r, l `Map.member` f2r]
+                                        k' = Map.delete alpha2 $ Map.delete alpha1 k
+                                        ks = Map.singleton alpha' $ T.RecordKind (f1l `Map.union` f2l) (f1r `Map.union` f2r)
+                                    return $
+                                        Just
+                                            ( apply s' $ u' `Set.union` us
+                                            , apply s' $ k' `Map.union` ks
+                                            , s `composeSubs` s'
+                                            )
+                            _ -> return Nothing
+                    _ -> throwError $ UnificationError "Unification failed"
         _ -> return Nothing
 
 firstJustM :: (Monad m) => [m (Maybe a)] -> m (Maybe a)
@@ -197,12 +196,12 @@ unifyStep (u, k, s) = do
             , ki <- Map.toList k ++ replicate (length u) ("__AUX__", T.Universal)
             ]
     case results of
-        [] -> error "Types do not unify"
+        [] -> throwError $ UnificationError "Types do not unify"
         _ -> do
             result <- firstJustM results
             case result of
                 Just result' -> return result'
-                Nothing -> error "Types do not unify"
+                Nothing -> throwError $ UnificationError "Types do not unify"
 
 -- | Most general unification for two types.
 unify :: KindAssignment -> [TypePair] -> TI (KindAssignment, Substitution)

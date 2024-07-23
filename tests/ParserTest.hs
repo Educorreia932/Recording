@@ -6,6 +6,11 @@ import Implicit.Terms
 import System.Exit qualified as Exit
 import Test.HUnit
 
+parseExpression' :: String -> Expression
+parseExpression' input = case parseExpression input of
+    Left err -> error $ show err
+    Right expr -> expr
+
 testParser :: Test
 testParser =
     TestList
@@ -13,17 +18,17 @@ testParser =
             assertEqual
                 "Integer"
                 (Literal 42)
-                (parseExpression "42")
+                (parseExpression' "42")
         , TestCase $
             assertEqual
                 "Negative Integer"
                 (Literal (-42))
-                (parseExpression "-42")
+                (parseExpression' "-42")
         , TestCase $
             assertEqual
                 "Record"
                 (Record (Map.fromList [("Name", String "Joe"), ("Office", Literal 433)]))
-                (parseExpression "{ Name = \"Joe\", Office = 433 }")
+                (parseExpression' "{ Name = \"Joe\", Office = 433 }")
         , TestCase $
             assertEqual
                 "Field access"
@@ -31,7 +36,7 @@ testParser =
                     (Record (Map.fromList [("Name", String "Joe"), ("Office", Literal 433)]))
                     "Name"
                 )
-                (parseExpression "{ Name = \"Joe\", Office = 433 }.Name")
+                (parseExpression' "{ Name = \"Joe\", Office = 433 }.Name")
         , TestCase $
             assertEqual
                 "Application"
@@ -40,13 +45,13 @@ testParser =
                     "Name"
                     (String "Hanako")
                 )
-                (parseExpression "modify({ Name = \"Joe\"}, Name, \"Hanako\")")
+                (parseExpression' "modify({ Name = \"Joe\"}, Name, \"Hanako\")")
         , TestCase $
             assertEqual
                 "Application"
                 ( Application (Variable "x") (Variable "y")
                 )
-                (parseExpression "(x) y")
+                (parseExpression' "(x) y")
         , TestCase $
             assertEqual
                 "Identity"
@@ -54,7 +59,7 @@ testParser =
                     "x"
                     (Variable "x")
                 )
-                (parseExpression "λx -> x")
+                (parseExpression' "λx -> x")
         , TestCase $
             assertEqual
                 "Let expression"
@@ -63,7 +68,7 @@ testParser =
                     (Literal 42)
                     (Variable "x")
                 )
-                (parseExpression "let x = 42 in x")
+                (parseExpression' "let x = 42 in x")
         ]
 
 tests :: Test

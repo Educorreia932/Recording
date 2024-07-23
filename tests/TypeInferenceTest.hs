@@ -2,10 +2,16 @@ module TypeInferenceTest where
 
 import Data.Map qualified as Map
 import Explicit.Terms
-import Explicit.Types qualified as T
 import Explicit.TypeInference
+import Explicit.Types qualified as T
 import Explicit.Typing (Scheme (..))
+import Implicit.Parser (parseExpression)
 import Test.HUnit
+
+typeInference' :: String -> (Expression, T.Type)
+typeInference' input = case parseExpression input >>= typeInference of
+    Left err -> error $ show err
+    Right res -> res
 
 testEvaluate :: Test
 testEvaluate =
@@ -14,14 +20,14 @@ testEvaluate =
             assertEqual
                 "Constant"
                 (Literal 42, T.Int)
-                (typeInference "42")
+                (typeInference' "42")
         , TestCase $
             assertEqual
                 "Abstraction"
                 ( Abstraction "x" (T.Parameter "t0") (Variable "x" [])
                 , T.Parameter "t0" `T.Arrow` T.Parameter "t0"
                 )
-                (typeInference "λx -> x")
+                (typeInference' "λx -> x")
         , TestCase $
             assertEqual
                 "Application"
@@ -35,7 +41,7 @@ testEvaluate =
                     (Literal 1)
                 , T.Record (Map.singleton "A" T.Int)
                 )
-                (typeInference "(λx -> { A = x }) 1")
+                (typeInference' "(λx -> { A = x }) 1")
         , TestCase $
             assertEqual
                 "Let expression"
@@ -47,7 +53,7 @@ testEvaluate =
                         (Application (Variable "id" [T.Int]) (Literal 42))
                 , T.Int
                 )
-                (typeInference "let id = λx -> x in id 42")
+                (typeInference' "let id = λx -> x in id 42")
         , TestCase $
             assertEqual
                 "Record"
@@ -62,7 +68,7 @@ testEvaluate =
                         , ("B", T.Int)
                         ]
                 )
-                (typeInference "{ A = 1, B = 2 }")
+                (typeInference' "{ A = 1, B = 2 }")
         , TestCase $
             assertEqual
                 "Modify"
@@ -86,7 +92,7 @@ testEvaluate =
                       , t
                       )
                 )
-                (typeInference "modify({ A = 1, B = 2 }, A, 3)")
+                (typeInference' "modify({ A = 1, B = 2 }, A, 3)")
         ]
 
 tests :: Test

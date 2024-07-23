@@ -2,15 +2,17 @@ module CompilationTest where
 
 import Data.Map qualified as Map
 import Explicit.Terms qualified as E
+import Explicit.TypeInference (typeInference)
 import Explicit.Types qualified as T
 import Implementation.Compilation
 import Implementation.Terms qualified as I
 import Implicit.Parser
-import Explicit.TypeInference (typeInference)
 import Test.HUnit
 
 compile' :: String -> I.Expression
-compile' = compile . fst . typeInference
+compile' input = case parseExpression input >>= typeInference >>= \(expr, _) -> compile expr of
+    Left err -> error $ show err
+    Right expr -> expr
 
 testCompilation :: Test
 testCompilation =

@@ -168,4 +168,3 @@ evaluate (Extend e1 i e2) =
                     return $ Record $ insertAt (i' - 1) r e2'
                 _ -> throwError $ EvaluationError "Extend non-record"
         _ -> throwError $ EvaluationError "Invalid index"
-

@@ -1,11 +1,11 @@
 module EvaluatorTest where
 
 import Data.Map qualified as Map
+import Explicit.TypeInference (typeInference)
 import Implementation.Compilation
 import Implementation.Evaluator
 import Implementation.Terms
 import Implicit.Parser
-import Explicit.TypeInference (typeInference)
 import System.Exit qualified as Exit
 import Test.HUnit (Test (TestCase, TestList), assertEqual)
 

@@ -1,6 +1,8 @@
 <div align=center>
-   <img src="logo.png">
+   <img src="logo.png" width=500>
 </div>
+
+# Recording
 
 Recording is a REPL for a polymorphic $\lambda$-calculus with support for records and polymorphic operations over them.
 
@@ -15,9 +17,12 @@ cabal install
 Execute `cabal run` to start the REPL.
 
 ```
-λχ interpreter. Type :h for help
-λ>
+Recording (1.0.1). Type :h to see a list of available commands
+λ> :h
 ```
+
+For information on how to use the interpreter, type `:h` in the REPL.
+
 
 # Example
 
@@ -30,7 +35,7 @@ Execute `cabal run` to start the REPL.
 
 # Tests
 
-To run the tests suite, execute:
+In order to run the tests suite, execute:
 
 ```
 cabal test

@@ -4,7 +4,7 @@
 
 # Recording
 
-Recording is a REPL for a polymorphic $\lambda$-calculus with support for records and polymorphic operations over them.
+Recording is a REPL for a $\lambda$-calculus with support for records and polymorphic operations over them.
 
 # Installation
 
@@ -35,7 +35,7 @@ For information on how to use the interpreter, type `:h` in the REPL.
 
 # Tests
 
-In order to run the tests suite, execute:
+To run the test suite, execute the following:
 
 ```
 cabal test
@@ -43,4 +43,4 @@ cabal test
 
 --- 
 
-This work has been done as part of my Master's thesis at [FEUP](https://sigarra.up.pt/feup/en/). 
+This work was part of my Master's thesis at [FEUP](https://sigarra.up.pt/feup/en/). 

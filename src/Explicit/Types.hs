@@ -1,6 +1,5 @@
 module Explicit.Types where
 
-import Data.List (intercalate)
 import Data.Map qualified as Map
 import Pretty
 import Prettyprinter
@@ -11,19 +10,11 @@ type Fields = Map.Map String Type
 data Kind
     = Universal
     | RecordKind Fields Fields
-    deriving (Eq, Ord)
-
-instance Show Kind where
-    show Universal = "U"
-    show (RecordKind m1 m2) = "{{ " ++ showFields m1 ++ "|| " ++ showFields m2 ++ "}}"
-      where
-        showFields x =
-            intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList x)
-                ++ if not (null x) then " " else ""
+    deriving (Eq, Ord, Show)
 
 instance Pretty Kind where
     pretty Universal = pretty "𝒰"
-    pretty (RecordKind m1 m2) = doubleBraces $ space <> prettyFields m1 <> space <> pretty "||" <> space <> prettyFields m2 <> space
+    pretty (RecordKind m1 m2) = dbraces $ space <> prettyFields m1 <> space <> pretty "||" <> space <> prettyFields m2 <> space
       where
         prettyFields x =
             hcat
@@ -40,27 +31,19 @@ data Type
     = Int
     | String
     | Parameter String
+    | List [Type]
     | Arrow Type Type
     | Record Fields
     | ForAll KindedType Type
     | Contraction Type String Type
     | Extension Type String Type
-    deriving (Eq, Ord)
-
-instance Show Type where
-    show Int = "Int"
-    show String = "String"
-    show (Parameter p) = p
-    show (Arrow t1 t2) = "(" ++ show t1 ++ " -> " ++ show t2 ++ ")"
-    show (ForAll (t, k) t') = "∀" ++ t ++ "::" ++ show k ++ "." ++ show t'
-    show (Record m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }"
-    show (Contraction t1 l t2) = show t1 ++ " - { " ++ l ++ ": " ++ show t2 ++ " }"
-    show (Extension t1 l t2) = show t1 ++ " + { " ++ l ++ ": " ++ show t2 ++ " }"
+    deriving (Eq, Ord, Show)
 
 instance Pretty Type where
     pretty Int = pretty "Int"
     pretty String = pretty "String"
     pretty (Parameter p) = pretty p
+    pretty (List t) = brackets $ hcat (punctuate comma (map pretty t))
     pretty (Arrow t1 t2) = parens $ pretty t1 <> pretty " -> " <> pretty t2
     pretty (ForAll (t, k) t') = pretty "∀" <> pretty t <> pretty "::" <> pretty k <> pretty "." <> pretty t'
     pretty (Record m) =
@@ -87,6 +70,7 @@ typeKinds :: Type -> [Kind]
 typeKinds Int = []
 typeKinds String = []
 typeKinds (Parameter _) = [Universal]
+typeKinds (List t) = concatMap typeKinds t
 typeKinds (Arrow t1 t2) = typeKinds t1 ++ typeKinds t2
 typeKinds (Record m) = concatMap typeKinds (Map.elems m)
 typeKinds (ForAll (_, k) t') = k : typeKinds t'

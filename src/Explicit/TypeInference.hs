@@ -73,6 +73,28 @@ infer (k, t) = infer'
                         , T.rewrite $ apply substitution tau
                         )
 
+    -- List
+    infer' (List xs) =
+        do
+            (_, xs') <-
+                mapAccumM
+                    ( \(k', s') mi ->
+                        do
+                            (ki, si, mi', taui) <- infer (k', apply s' t) mi
+                            return
+                                ( (ki, s' `composeSubs` si)
+                                , (ki, si, mi', taui)
+                                )
+                    )
+                    (k, nullSubstitution)
+                    xs
+            return
+                ( k
+                , nullSubstitution
+                , E.List $ map (\(_, _, mi, _) -> mi) xs'
+                , T.List $ map (\(_, _, _, taui) -> taui) xs'
+                )
+
     -- Abstraction
     infer' (Abstraction x m1) =
         do
@@ -198,7 +220,7 @@ infer (k, t) = infer'
     infer' (Let x m1 m2) =
         do
             (k1, s1, m1', tau1) <- infer' m1
-            let (k1', sigma) = generalize k1 (apply s1 t) tau1
+            let (_, sigma) = generalize k1 (apply s1 t) tau1
             (sigma', s3) <- instantiate sigma
             (k2, s2, m2', tau2) <-
                 infer

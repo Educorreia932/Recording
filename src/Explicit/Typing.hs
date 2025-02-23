@@ -32,6 +32,7 @@ instance Types T.Type where
     ftv T.Int = Set.empty
     ftv T.String = Set.empty
     ftv (T.Parameter x) = Set.singleton x
+    ftv (T.List ts) = ftv ts
     ftv (T.Arrow t1 t2) = ftv t1 `Set.union` ftv t2
     ftv (T.Record m) = ftv m
     ftv (T.ForAll (l, _) t') = ftv t' Set.\\ Set.singleton l
@@ -45,6 +46,7 @@ instance Types T.Type where
         sub (T.Parameter p)
             | substitution & has (ix p) = substitution Map.! p
             | otherwise = T.Parameter p
+        sub (T.List ts) = T.List $ apply substitution ts
         sub (T.Arrow t1 t2) = T.Arrow (sub t1) (sub t2)
         sub (T.Record m) = T.Record $ fmap sub m
         sub (T.ForAll (x, k) t)
@@ -84,6 +86,7 @@ instance Types E.Expression where
     ftv (E.Literal _) = Set.empty
     ftv (E.String _) = Set.empty
     ftv (E.Variable _ ts) = ftv ts
+    ftv (E.List l) = ftv l
     ftv (E.Abstraction _ t e) = ftv t `Set.union` ftv e
     ftv (E.Application e1 e2) = ftv e1 `Set.union` ftv e2
     ftv (E.Let _ t e1 e2) = ftv t `Set.union` ftv e1 `Set.union` ftv e2
@@ -99,6 +102,7 @@ instance Types E.Expression where
         sub (E.Literal a) = E.Literal a
         sub (E.String a) = E.String a
         sub (E.Variable x ts) = E.Variable x $ apply substitution ts
+        sub (E.List l) = E.List $ fmap sub l
         sub (E.Abstraction x t e) = E.Abstraction x (apply substitution t) (sub e)
         sub (E.Application e1 e2) = E.Application (sub e1) (sub e2)
         sub (E.Let x t e1 e2) = E.Let x (apply substitution t) (sub e1) (sub e2)

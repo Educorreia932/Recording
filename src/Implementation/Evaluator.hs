@@ -69,6 +69,7 @@ instance Substitutes Expression where
         sub evaluatedExpr (Variable v)
             | var == v = return evaluatedExpr
             | otherwise = return $ Variable v
+        sub evaluatedExpr (List l) = List <$> mapM (sub evaluatedExpr) l
         sub evaluatedExpr (IndexAbstraction i body)
             | var == i = return $ IndexAbstraction i body
             -- α-conversion
@@ -108,6 +109,8 @@ evaluate (Literal n) = return $ Literal n
 evaluate (String s) = return $ String s
 -- Variable
 evaluate (Variable v) = return $ Variable v
+-- List
+evaluate (List l) = List <$> mapM evaluate l
 -- Abstraction
 evaluate (Abstraction v e) = return $ Abstraction v e
 -- Record

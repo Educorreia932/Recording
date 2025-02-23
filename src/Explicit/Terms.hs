@@ -3,6 +3,8 @@ module Explicit.Terms where
 import Data.List (intercalate)
 import Data.Map qualified as Map
 import Explicit.Types qualified as T
+import Prettyprinter
+import Prelude hiding ((<>))
 
 type Label = String
 
@@ -34,3 +36,28 @@ instance Show Expression where
     show (Modify e1 t l e2) = "modify(" ++ show e1 ++ ": " ++ show t ++ ", " ++ l ++ ", " ++ show e2 ++ ")"
     show (Contract e t l) = show e ++ ": " ++ show t ++ " \\\\ " ++ l
     show (Extend e1 t l e2) = "extend(" ++ show e1 ++ ": " ++ show t ++ ", " ++ l ++ ", " ++ show e2 ++ ")"
+
+instance Pretty Expression where
+    pretty (Literal a) = pretty a
+    pretty (Variable x t) = pretty x <> space <> hsep (map pretty t)
+    pretty (String s) = dquotes $ pretty s
+    pretty (Abstraction x t e2) = pretty "λ" <> pretty x <> pretty ": " <> pretty t <> pretty " -> " <> pretty e2
+    pretty (Application e1 e2) =
+        pretty e1 <> space <> case e2 of
+            Application _ _ -> parens $ pretty e2
+            _ -> pretty e2
+    pretty (Poly e _) = pretty "Poly" <> parens (pretty e)
+    pretty (Let x t e1 e2) = align $ pretty "let" <> space <> pretty x <> pretty ": " <> pretty t <> pretty " = " <> pretty e1 <> softline <> pretty " in " <> pretty e2
+    pretty (Record m) =
+        braces $
+            space
+                <> hcat
+                    ( punctuate
+                        comma
+                        (map (\(k, v) -> pretty k <> space <> equals <> space <> pretty v) $ Map.toAscList m)
+                    )
+                <> space
+    pretty (Dot e t x) = parens (pretty e <> pretty ": " <> pretty t) <> dot <> pretty x
+    pretty (Modify e1 t l e2) = pretty "modify" <> parens (pretty e1 <> pretty ": " <> pretty t <> pretty ", " <> pretty l <> pretty ", " <> pretty e2)
+    pretty (Contract e t l) = pretty e <> pretty ": " <> pretty t <> pretty " \\\\ " <> pretty l
+    pretty (Extend e1 t l e2) = pretty "extend" <> parens (pretty e1 <> pretty ": " <> pretty t <> pretty ", " <> pretty l <> pretty ", " <> pretty e2)

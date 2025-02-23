@@ -2,6 +2,9 @@ module Explicit.Types where
 
 import Data.List (intercalate)
 import Data.Map qualified as Map
+import Pretty
+import Prettyprinter
+import Prelude hiding ((<>))
 
 type Fields = Map.Map String Type
 
@@ -17,6 +20,17 @@ instance Show Kind where
         showFields x =
             intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList x)
                 ++ if not (null x) then " " else ""
+
+instance Pretty Kind where
+    pretty Universal = pretty "𝒰"
+    pretty (RecordKind m1 m2) = doubleBraces $ space <> prettyFields m1 <> space <> pretty "||" <> space <> prettyFields m2 <> space
+      where
+        prettyFields x =
+            hcat
+                ( punctuate
+                    comma
+                    (map (\(k, v) -> pretty k <> pretty ": " <> pretty v) $ Map.toAscList x)
+                )
 
 type KindedType = (String, Kind)
 
@@ -40,8 +54,24 @@ instance Show Type where
     show (Arrow t1 t2) = "(" ++ show t1 ++ " -> " ++ show t2 ++ ")"
     show (ForAll (t, k) t') = "∀" ++ t ++ "::" ++ show k ++ "." ++ show t'
     show (Record m) = "{ " ++ intercalate ", " (map (\(k, v) -> k ++ ": " ++ show v) $ Map.toAscList m) ++ " }"
-    show (Contraction t1 l t2) = show t1 ++ " - { " ++ l ++ ": " ++ show t2 ++ "}"
-    show (Extension t1 l t2) = show t1 ++ " + { " ++ l ++ ": " ++ show t2 ++ "}"
+    show (Contraction t1 l t2) = show t1 ++ " - { " ++ l ++ ": " ++ show t2 ++ " }"
+    show (Extension t1 l t2) = show t1 ++ " + { " ++ l ++ ": " ++ show t2 ++ " }"
+
+instance Pretty Type where
+    pretty Int = pretty "Int"
+    pretty String = pretty "String"
+    pretty (Parameter p) = pretty p
+    pretty (Arrow t1 t2) = parens $ pretty t1 <> pretty " -> " <> pretty t2
+    pretty (ForAll (t, k) t') = pretty "∀" <> pretty t <> pretty "::" <> pretty k <> pretty "." <> pretty t'
+    pretty (Record m) =
+        braces $
+            hcat
+                ( punctuate
+                    (pretty ", ")
+                    (map (\(k, v) -> pretty k <> pretty ": " <> pretty v) $ Map.toAscList m)
+                )
+    pretty (Contraction t1 l t2) = pretty t1 <> pretty " - " <> braces (pretty l <> pretty ": " <> pretty t2)
+    pretty (Extension t1 l t2) = pretty t1 <> pretty " + " <> braces (pretty l <> pretty ": " <> pretty t2)
 
 -- Retrieves all (type, kind) pairs from a polymorphic type
 typeParameters :: Type -> [KindedType]

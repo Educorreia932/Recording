@@ -26,7 +26,6 @@ reservedWords =
     , "extend"
     , "difference"
     , "union"
-    , "λ"
     , "\\"
     , "\\\\"
     ]
@@ -160,7 +159,7 @@ union = do
 
 abstraction :: Parser Expression
 abstraction = do
-    _ <- char 'λ' <|> char '\\'
+    _ <- char '\\'
     vars <- lexeme $ some identifier
     _ <- reservedWord "->"
     e <- expression

@@ -1,5 +1,6 @@
 module Repl where
 
+import Control.Monad ((>=>))
 import Control.Monad.IO.Class
 import Errors (RecordingException)
 import Explicit.Terms (Expression)
@@ -8,18 +9,12 @@ import Explicit.Types (Type)
 import Implementation.Compilation (compile)
 import Implementation.Evaluator (evaluate)
 import Implicit.Parser (parseExpression)
+import Implicit.Terms qualified
 import Prettyprinter
 import Prettyprinter.Render.String
 import System.Console.Repline
 
 type Repl a = HaskelineT IO a
-
-cmd :: String -> Repl ()
-cmd input = do
-  let res = parseExpression input
-  case res of
-    Left err -> liftIO $ print err
-    Right expr -> liftIO $ putStrLn $ renderString $ layoutPretty defaultLayoutOptions $ pretty expr
 
 -- Tab completion
 completer :: (Monad m) => WordCompleter m
@@ -41,12 +36,19 @@ help _ = liftIO $ do
 initializer :: Repl ()
 initializer = liftIO $ putStrLn "Recording (1.2.0). Type :h to see a list of available commands"
 
-handleAction :: (MonadIO m, Pretty a) => ((Expression, Type) -> Either RecordingException a) -> String -> m ()
-handleAction action input = do
-  let result = parseExpression input >>= typeInference >>= action
+handleParsed :: (MonadIO m, Pretty a) => (Implicit.Terms.Expression -> Either RecordingException a) -> String -> m ()
+handleParsed process input = do
+  let result = parseExpression input >>= process
   case result of
     Left err -> liftIO $ print err
     Right expr -> liftIO $ putStrLn $ renderString $ layoutSmart defaultLayoutOptions $ pretty expr
+
+-- Default command
+cmd :: String -> Repl ()
+cmd = handleParsed Right
+
+handleAction :: (MonadIO m, Pretty a) => ((Expression, Type) -> Either RecordingException a) -> String -> m ()
+handleAction action = handleParsed $ typeInference >=> action
 
 -- List of available commands
 commands :: Options (HaskelineT IO)

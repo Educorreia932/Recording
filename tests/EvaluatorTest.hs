@@ -21,27 +21,27 @@ testEvaluate =
             assertEqual
                 "Application"
                 (Literal 42)
-                (evaluate' "(λx -> x) 42")
+                (evaluate' "(\\x -> x) 42")
         , TestCase $
             assertEqual
                 "Nested application"
                 (Literal 42)
-                (evaluate' "((λx -> x) λy -> y) 42")
+                (evaluate' "((\\x -> x) \\y -> y) 42")
         , TestCase $
             assertEqual
                 "Application with abstraction argument"
                 (Abstraction "y" (Literal 42))
-                (evaluate' "(λx -> x) λy -> 42")
+                (evaluate' "(\\x -> x) \\y -> 42")
         , TestCase $
             assertEqual
                 "Application with nested abstraction argument"
                 (Abstraction "y" (Literal 42))
-                (evaluate' "(λx -> x) λy -> 42")
+                (evaluate' "(\\x -> x) \\y -> 42")
         , TestCase $
             assertEqual
                 "Currying"
                 (Literal 1)
-                (evaluate' "((λx λy -> x) 1) 2")
+                (evaluate' "((\\x y -> x) 1) 2")
         , TestCase $
             assertEqual
                 "Field access"
@@ -61,17 +61,17 @@ testEvaluate =
             assertEqual
                 "Polymorphic extension"
                 (Record [Literal 1])
-                (evaluate' "let f = λx -> extend(x, B, 2) \\\\ B in f { A = 1 }")
+                (evaluate' "let f = \\x -> extend(x, B, 2) \\\\ B in f { A = 1 }")
         , TestCase $
             assertEqual
                 "Polymorphic contraction"
                 (Record [Literal 2])
-                (evaluate' "let f = λx -> x \\\\ A in f { A = 1, B = 2 }")
+                (evaluate' "let f = \\x -> x \\\\ A in f { A = 1, B = 2 }")
         , TestCase $
             assertEqual
                 "Polymorphic extension and contraction"
                 (Record [Literal 3, Literal 2])
-                (evaluate' "let f = λx -> extend(x, C, 2) \\\\ A in f { A = 1, B = 3 }")
+                (evaluate' "let f = \\x -> extend(x, C, 2) \\\\ A in f { A = 1, B = 3 }")
         ]
 
 tests :: Test

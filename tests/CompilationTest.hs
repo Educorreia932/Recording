@@ -40,7 +40,7 @@ testCompilation =
                         (I.Record [I.String "Joe", I.Literal 443])
                     )
                 )
-                (compile' "let name = λx-> x . Name in name { Name = \"Joe\", Office = 443 }")
+                (compile' "let name = \\x-> x . Name in name { Name = \"Joe\", Office = 443 }")
         , TestCase $
             assertEqual
                 "Contraction"

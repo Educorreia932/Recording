@@ -27,7 +27,7 @@ testEvaluate =
                 ( Abstraction "x" (T.Parameter "t0") (Variable "x" [])
                 , T.Parameter "t0" `T.Arrow` T.Parameter "t0"
                 )
-                (typeInference' "λx -> x")
+                (typeInference' "\\x -> x")
         , TestCase $
             assertEqual
                 "Application"
@@ -41,7 +41,7 @@ testEvaluate =
                     (Literal 1)
                 , T.Record (Map.singleton "A" T.Int)
                 )
-                (typeInference' "(λx -> { A = x }) 1")
+                (typeInference' "(\\x -> { A = x }) 1")
         , TestCase $
             assertEqual
                 "Let expression"
@@ -53,7 +53,7 @@ testEvaluate =
                         (Application (Variable "id" [T.Int]) (Literal 42))
                 , T.Int
                 )
-                (typeInference' "let id = λx -> x in id 42")
+                (typeInference' "let id = \\x -> x in id 42")
         , TestCase $
             assertEqual
                 "Record"

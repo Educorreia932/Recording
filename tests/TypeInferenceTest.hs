@@ -45,11 +45,11 @@ testEvaluate =
         , TestCase $
             assertEqual
                 "Let expression"
-                ( let t = T.ForAll ("t1", T.Universal) (T.Parameter "t1" `T.Arrow` T.Parameter "t1")
+                ( let t = T.ForAll ("t0", T.Universal) (T.Parameter "t0" `T.Arrow` T.Parameter "t0")
                    in Let
                         "id"
                         t
-                        (Poly (Abstraction "x" (T.Parameter "t1") (Variable "x" [])) t)
+                        (Poly (Abstraction "x" (T.Parameter "t0") (Variable "x" [])) t)
                         (Application (Variable "id" [T.Int]) (Literal 42))
                 , T.Int
                 )

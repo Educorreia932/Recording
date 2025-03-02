@@ -13,6 +13,7 @@ import Implicit.Terms qualified as I
 import Prettyprinter
 import Prettyprinter.Render.String
 import System.Console.Repline
+import Pretty
 
 type Repl a = HaskelineT IO a
 
@@ -41,7 +42,7 @@ handleParsed process input = do
   let result = parseExpression input >>= process
   case result of
     Left err -> liftIO $ print err
-    Right expr -> liftIO $ putStrLn $ renderString $ layoutSmart defaultLayoutOptions $ pretty expr
+    Right expr -> liftIO $ putStrLn $ render expr
 
 -- Default command
 cmd :: String -> Repl ()

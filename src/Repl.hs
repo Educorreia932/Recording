@@ -7,7 +7,7 @@ import Explicit.Terms qualified as E
 import Explicit.TypeInference (typeInference)
 import Explicit.Types (Type)
 import Implementation.Compilation (compile)
-import Implementation.Evaluator (evaluate)
+import Implementation.Evaluation (evaluate)
 import Implicit.Parser (parseExpression)
 import Implicit.Terms qualified as I
 import Prettyprinter

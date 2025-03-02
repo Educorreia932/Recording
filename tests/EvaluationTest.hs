@@ -1,9 +1,9 @@
-module EvaluatorTest where
+module EvaluationTest where
 
 import Data.Map qualified as Map
 import Explicit.TypeInference (typeInference)
 import Implementation.Compilation
-import Implementation.Evaluator
+import Implementation.Evaluation
 import Implementation.Terms
 import Implicit.Parser
 import System.Exit qualified as Exit

@@ -1,7 +1,7 @@
 module Main where
 
 import CompilationTest qualified
-import EvaluatorTest qualified
+import EvaluationTest qualified
 import ParserTest qualified
 import Test.HUnit (Test (TestList), runTestTT)
 import TypeInferenceTest qualified
@@ -13,7 +13,7 @@ tests =
         [ ParserTest.tests
         , TypeInferenceTest.tests
         , CompilationTest.tests
-        , EvaluatorTest.tests
+        , EvaluationTest.tests
         ]
 
 main = do

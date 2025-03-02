@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Implementation.Evaluator where
+module Implementation.Evaluation where
 
 import Control.Monad.Except
 import Data.Foldable (toList)

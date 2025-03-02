@@ -34,7 +34,7 @@ library
     Explicit.Typing
     Explicit.Unification
     Implementation.Compilation
-    Implementation.Evaluator
+    Implementation.Evaluation
     Implementation.Terms
     Implicit.Parser
     Implicit.Terms
@@ -57,7 +57,7 @@ executable recording
     Explicit.Typing
     Explicit.Unification
     Implementation.Compilation
-    Implementation.Evaluator
+    Implementation.Evaluation
     Implementation.Terms
     Implicit.Parser
     Implicit.Terms
@@ -72,7 +72,7 @@ test-suite recording-test
   hs-source-dirs:   tests
   other-modules:
     CompilationTest
-    EvaluatorTest
+    EvaluationTest
     ParserTest
     TypeInferenceTest
   default-language: GHC2021

@@ -72,6 +72,16 @@ testEvaluate =
                 "Polymorphic extension and contraction"
                 (Record [Literal 3, Literal 2])
                 (evaluate' "let f = \\x -> extend(x, C, 2) \\\\ A in f { A = 1, B = 3 }")
+        , TestCase $
+            assertEqual
+                "Function composition (1)"
+                (Record [Literal 2])
+                (evaluate' "let a = \\x -> x \\\\ A in let b = \\x -> extend(x, B, 2) in let f = \\x -> a (b x) in f { A = 1 }")
+        , TestCase $
+            assertEqual
+                "Function composition (2)"
+                (Literal 2)
+                (evaluate' "let a = \\x -> x \\\\ A in let b = \\x -> extend(x, B, 2) in let c = \\x -> x.B in let f = \\x -> c (a (b x)) in f { A = 1 }")
         ]
 
 tests :: Test

@@ -1,7 +1,7 @@
 module Implicit.Terms where
 
 import Data.Map qualified as Map
-import Pretty (lambda, rarrow)
+import Pretty (lambda, rarrow, dbackslash)
 import Prettyprinter
 import Prelude hiding ((<>))
 
@@ -40,5 +40,5 @@ instance Pretty Expression where
             <> pretty " }"
     pretty (Dot e x) = pretty e <> pretty " . " <> pretty x
     pretty (Modify e1 l e2) = pretty "modify" <> parens (pretty e1 <> pretty ", " <> pretty l <> pretty ", " <> pretty e2)
-    pretty (Contract e l) = pretty e <> pretty " ⑊ " <> pretty l
+    pretty (Contract e l) = pretty e <+> dbackslash <+> pretty l
     pretty (Extend e1 l e2) = pretty "extend" <> parens (pretty e1 <> pretty ", " <> pretty l <> pretty ", " <> pretty e2)

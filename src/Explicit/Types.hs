@@ -14,14 +14,18 @@ data Kind
 
 instance Pretty Kind where
     pretty Universal = pretty "𝒰"
-    pretty (RecordKind m1 m2) = dbraces $ space <> prettyFields m1 <> space <> pretty "||" <> space <> prettyFields m2 <> space
+    pretty (RecordKind m1 m2) = dbraces $ prettyFields m1 <> pretty "||" <> prettyFields m2
       where
-        prettyFields x =
-            hcat
-                ( punctuate
-                    comma
-                    (map (\(k, v) -> pretty k <> pretty ": " <> pretty v) $ Map.toAscList x)
-                )
+        prettyFields x
+            | Map.null x = space
+            | otherwise =
+                space
+                    <> hcat
+                        ( punctuate
+                            comma
+                            (map (\(k, v) -> pretty k <> colon <+> pretty v) $ Map.toAscList x)
+                        )
+                    <> space
 
 type KindedType = (String, Kind)
 
@@ -44,17 +48,19 @@ instance Pretty Type where
     pretty String = pretty "String"
     pretty (Parameter p) = pretty p
     pretty (List t) = brackets $ hcat (punctuate comma (map pretty t))
-    pretty (Arrow t1 t2) = parens $ pretty t1 <> pretty " -> " <> pretty t2
-    pretty (ForAll (t, k) t') = pretty "∀" <> pretty t <> pretty "::" <> pretty k <> pretty "." <> pretty t'
-    pretty (Record m) =
-        braces $
-            hcat
-                ( punctuate
-                    (pretty ", ")
-                    (map (\(k, v) -> pretty k <> pretty ": " <> pretty v) $ Map.toAscList m)
-                )
-    pretty (Contraction t1 l t2) = pretty t1 <> pretty " - " <> braces (pretty l <> pretty ": " <> pretty t2)
-    pretty (Extension t1 l t2) = pretty t1 <> pretty " + " <> braces (pretty l <> pretty ": " <> pretty t2)
+    pretty (Arrow t1 t2) = parens $ pretty t1 <+> rarrow <+> pretty t2
+    pretty (ForAll (t, k) t') = forAll <> pretty t <> pretty "::" <> pretty k <> dot <> pretty t'
+    pretty (Record m)
+        | Map.null m = braces space
+        | otherwise =
+            braces $
+                hcat
+                    ( punctuate
+                        (pretty ", ")
+                        (map (\(k, v) -> pretty k <> colon <+> pretty v) $ Map.toAscList m)
+                    )
+    pretty (Contraction t1 l t2) = parens $ pretty t1 <+> pretty "-" <+> braces (pretty l <> colon <+> pretty t2)
+    pretty (Extension t1 l t2) = parens $ pretty t1 <+> pretty "+" <+> braces (pretty l <> colon <+> pretty t2)
 
 -- Retrieves all (type, kind) pairs from a polymorphic type
 typeParameters :: Type -> [KindedType]

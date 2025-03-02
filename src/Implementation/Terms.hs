@@ -39,7 +39,7 @@ instance Pretty Expression where
     pretty (String s) = dquotes $ pretty s
     pretty (Variable x) = pretty x
     pretty (List l) = list $ map pretty l
-    pretty (Abstraction x e2) = lambda <> pretty x <+> pretty e2
+    pretty (Abstraction x e2) = lambda <> pretty x <+> rarrow <+> pretty e2
     pretty (Application e1 e2) =
         pretty e1 <+> case e2 of
             Application _ _ -> parens $ pretty e2
@@ -54,13 +54,8 @@ instance Pretty Expression where
                 <> pretty "in"
                 <+> pretty e2
     pretty (Record m) =
-        pretty "{ "
-            <> hcat
-                ( punctuate
-                    (pretty ", ")
-                    (map pretty m)
-                )
-            <> pretty " }"
+        braces $
+            hcat (punctuate comma (map pretty m))
     pretty (IndexExpression e i) = pretty e <> brackets (pretty i)
     pretty (IndexAbstraction i e) = lambda <> pretty i <+> rarrow <+> pretty e
     pretty (IndexApplication e i) = pretty e <+> pretty i

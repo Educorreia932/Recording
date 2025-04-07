@@ -75,6 +75,7 @@ test-suite recording-test
     EvaluationTest
     ParserTest
     TypeInferenceTest
+    UnificationTest
   default-language: GHC2021
   build-depends:
     , base                ^>=4.18.2.0
@@ -82,3 +83,4 @@ test-suite recording-test
     , HUnit               ^>=1.6
     , ordered-containers
     , recording
+    , mtl

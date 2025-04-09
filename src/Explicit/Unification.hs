@@ -4,7 +4,6 @@ import Control.Monad.Except
 import Data.Bifunctor qualified
 import Data.Map qualified as Map
 import Data.Set qualified as Set
-import Debug.Trace (trace, traceShow)
 import Errors
 import Explicit.Types qualified as T
 import Explicit.Typing
@@ -12,6 +11,9 @@ import Explicit.Typing
 type UnificationState = (Set.Set TypePair, KindAssignment, Substitution)
 
 type TypePair = (T.Type, T.Type)
+
+mapPair :: (t -> b) -> (t, t) -> (b, b)
+mapPair f (x, y) = (f x, f y)
 
 unifyStep' :: UnificationState -> (TypePair, (String, T.Kind)) -> TI (Maybe UnificationState)
 unifyStep' (u, k, s) (ui, ki) =
@@ -142,7 +144,7 @@ unifyStep' (u, k, s) (ui, ki) =
                 return $
                     let u' = Set.delete ui u
                         (xi, li, (taui, tauj)) = head tm
-                        ui' = fmap (\t -> T.removeTypeModification t (xi, li)) ui
+                        ui' = mapPair (\t -> T.removeTypeModification t (xi, li)) ui
                      in Just
                             ( u' `Set.union` Set.fromList [(taui, tauj), ui']
                             , k

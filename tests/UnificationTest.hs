@@ -144,6 +144,74 @@ testUnification =
                         )
                     ]
                 )
+        , TestCase $
+            assertEqual
+                "Unify two extensibles types (common extension/contraction)"
+                ( Map.fromList [("y", T.RecordKind (Map.fromList [("A", T.Int), ("C", T.Int)]) Map.empty)]
+                , Map.fromList
+                    [
+                        ( "x"
+                        , T.Parameter "y"
+                        )
+                    ]
+                )
+                ( unify'
+                    ( Map.fromList
+                        [ ("x", T.RecordKind (Map.fromList [("A", T.Int)]) Map.empty)
+                        , ("y", T.RecordKind (Map.fromList [("C", T.Int)]) Map.empty)
+                        ]
+                    )
+                    [
+                        ( T.Extension
+                            (T.Parameter "x")
+                            "B"
+                            T.Int
+                        , T.Extension
+                            (T.Parameter "y")
+                            "B"
+                            T.Int
+                        )
+                    ]
+                )
+        , TestCase $
+            assertEqual
+                "Unify two extensibles types (no common extensions/contractions)"
+                ( Map.fromList [("t0", T.RecordKind (Map.fromList [("A", T.Int), ("C", T.Int)]) Map.empty)]
+                , Map.fromList
+                    [
+                        ( "x"
+                        , T.Extension
+                            (T.Parameter "t0")
+                            "B"
+                            T.Int
+                        )
+                    ,
+                        ( "y"
+                        , T.Extension
+                            (T.Parameter "t0")
+                            "D"
+                            T.Int
+                        )
+                    ]
+                )
+                ( unify'
+                    ( Map.fromList
+                        [ ("x", T.RecordKind (Map.fromList [("A", T.Int)]) Map.empty)
+                        , ("y", T.RecordKind (Map.fromList [("C", T.Int)]) Map.empty)
+                        ]
+                    )
+                    [
+                        ( T.Extension
+                            (T.Parameter "x")
+                            "D"
+                            T.Int
+                        , T.Extension
+                            (T.Parameter "y")
+                            "B"
+                            T.Int
+                        )
+                    ]
+                )
         ]
 
 tests :: Test

@@ -34,6 +34,13 @@ instance Pretty Index where
         | i > 0 = parens $ pretty s <+> pretty "+" <+> pretty i
         | otherwise = parens $ pretty s <+> pretty "-" <+> pretty (abs i)
 
+collectLets :: Expression -> ([(String, Expression)], Expression)
+collectLets (Let x e1 (Let y e2 e3)) =
+    let (bindings, body) = collectLets (Let y e2 e3)
+     in ((x, e1) : bindings, body)
+collectLets (Let x e1 e2) = ([(x, e1)], e2)
+collectLets expr = ([], expr)
+
 instance Pretty Expression where
     pretty (Literal a) = pretty a
     pretty (String s) = dquotes $ pretty s
@@ -45,17 +52,27 @@ instance Pretty Expression where
             Application _ _ -> parens $ pretty e2
             _ -> pretty e2
     pretty (Let x e1 e2) =
-        align $
-            pretty "let"
-                <+> pretty x
+        group $
+            vsep
+                [ pretty "let"
+                    <> hardline
+                    <> indent 2 (vsep (map prettyAssign ((x, e1) : bindings)))
+                , pretty "in"
+                    <> hardline
+                    <> indent 2 (pretty body)
+                ]
+      where
+        prettyAssign (x', e) =
+            pretty x'
                 <+> equals
-                <+> pretty e1
-                <> group (flatAlt (hardline <> space) (pretty " "))
-                <> pretty "in"
-                <+> pretty e2
+                <+> pretty e
+        (bindings, body) = collectLets e2
     pretty (Record m) =
-        braces $
-            hcat (punctuate comma (map pretty m))
+        encloseSep
+            (lbrace <> space)
+            (space <> rbrace)
+            (comma <> space)
+            (map pretty m)
     pretty (IndexExpression e i) = pretty e <> brackets (pretty i)
     pretty (IndexAbstraction i e) = lambda <> pretty i <+> rarrow <+> pretty e
     pretty (IndexApplication e i) = pretty e <+> pretty i

@@ -1,6 +1,6 @@
 cabal-version:   3.0
 name:            recording
-version:         1.1.0.0
+version:         1.2.0.0
 license-file:    LICENSE
 maintainer:      educorreia932@gmail.com
 author:          Eduardo Correia

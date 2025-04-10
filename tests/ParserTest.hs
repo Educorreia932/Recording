@@ -59,7 +59,7 @@ testParser =
                     "x"
                     (Variable "x")
                 )
-                (parseExpression' "λx -> x")
+                (parseExpression' "\\x -> x")
         , TestCase $
             assertEqual
                 "Let expression"

@@ -26,7 +26,6 @@ reservedWords =
     , "extend"
     , "difference"
     , "union"
-    , "λ"
     , "\\"
     , "\\\\"
     ]
@@ -51,8 +50,11 @@ identifier = (lexeme . try) (p >>= check)
 parentheses :: Parser a -> Parser a
 parentheses = between (symbol "(") (symbol ")")
 
-curlyBraces :: Parser a -> Parser a
-curlyBraces = between (symbol "{") (symbol "}")
+braces :: Parser a -> Parser a
+braces = between (symbol "{") (symbol "}")
+
+brackets :: Parser a -> Parser a
+brackets = between (symbol "[") (symbol "]")
 
 integer :: Parser Integer
 integer = do
@@ -68,18 +70,21 @@ number = integer <&> (Literal . fromIntegral)
 text :: Parser Expression
 text = lexeme $ char '"' >> manyTill L.charLiteral (char '"') <&> String
 
+list :: Parser Expression
+list = List <$> brackets (application `sepBy` lexeme (char ','))
+
 variable :: Parser Expression
 variable = identifier <&> Variable
 
 record :: Parser Expression
 record = do
-    fields <- curlyBraces $ Map.fromList <$> (field `sepBy` lexeme (char ','))
+    fields <- braces $ Map.fromList <$> (field `sepBy` lexeme (char ','))
     return (Record fields)
   where
     field = do
         k <- identifier
         _ <- lexeme $ char '='
-        v <- term
+        v <- application
         return (k, v)
 
 dotExpression :: Parser Expression
@@ -160,7 +165,7 @@ union = do
 
 abstraction :: Parser Expression
 abstraction = do
-    _ <- char 'λ' <|> char '\\'
+    _ <- char '\\'
     vars <- lexeme $ some identifier
     _ <- reservedWord "->"
     e <- expression
@@ -178,6 +183,7 @@ term =
             <|> number
             <|> letExpression
             <|> try contract
+            <|> try list
             <|> abstraction
             <|> modify
             <|> extend

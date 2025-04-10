@@ -12,6 +12,9 @@ type UnificationState = (Set.Set TypePair, KindAssignment, Substitution)
 
 type TypePair = (T.Type, T.Type)
 
+mapPair :: (t -> b) -> (t, t) -> (b, b)
+mapPair f (x, y) = (f x, f y)
+
 unifyStep' :: UnificationState -> (TypePair, (String, T.Kind)) -> TI (Maybe UnificationState)
 unifyStep' (u, k, s) (ui, ki) =
     case (ui, ki) of
@@ -111,18 +114,26 @@ unifyStep' (u, k, s) (ui, ki) =
                     T.Parameter chi' ->
                         case Map.lookup chi' k of
                             Just (T.RecordKind f2l f2r)
-                                | Map.keysSet f1l `Set.disjoint` Map.keysSet (T.contractions chi)
+                                | Map.keysSet f1l `Set.disjoint` Map.keysSet (T.contractions (T.rewrite chi))
                                     && Map.keysSet f1r
                                         `Set.disjoint` Map.keysSet
-                                            (f2r `Map.union` (f2l `Map.difference` T.contractions chi))
+                                            (f2r `Map.union` (f2l `Map.difference` T.contractions (T.rewrite chi)))
                                     && not (x `Set.member` ftv chi) ->
                                     let s' = Map.singleton x chi
                                         u' = Set.delete ui u
-                                        k' = Map.delete x k
+                                        k' = Map.delete chi' $ Map.delete x k
+                                        ks =
+                                            Map.singleton chi' $
+                                                apply
+                                                    s'
+                                                    ( T.RecordKind
+                                                        (f2l `Map.union` (f1l `Map.difference` (f2r `Map.union` (f2l `Map.difference` T.contractions (T.rewrite chi)))))
+                                                        (f2r `Map.union` (f1r `Map.difference` T.contractions (T.rewrite chi)))
+                                                    )
                                      in return $
                                             Just
                                                 ( apply s' u'
-                                                , apply s' k'
+                                                , apply s' k' `Map.union` ks
                                                 , s `composeSubs` s'
                                                 )
                             _ -> return Nothing
@@ -133,7 +144,7 @@ unifyStep' (u, k, s) (ui, ki) =
                 return $
                     let u' = Set.delete ui u
                         (xi, li, (taui, tauj)) = head tm
-                        ui' = fmap (\t -> T.removeTypeModification t (xi, li)) ui
+                        ui' = mapPair (\t -> T.removeTypeModification t (xi, li)) ui
                      in Just
                             ( u' `Set.union` Set.fromList [(taui, tauj), ui']
                             , k
@@ -169,11 +180,11 @@ unifyStep' (u, k, s) (ui, ki) =
                                             Set.fromList [(f1l Map.! l, f2l Map.! l) | l <- Map.keys f1l, l `Map.member` f2l]
                                                 `Set.union` Set.fromList [(f1r Map.! l, f2r Map.! l) | l <- Map.keys f1r, l `Map.member` f2r]
                                         k' = Map.delete alpha2 $ Map.delete alpha1 k
-                                        ks = Map.singleton alpha' $ T.RecordKind (f1l `Map.union` f2l) (f1r `Map.union` f2r)
+                                        ks = Map.singleton alpha' $ apply s $ T.RecordKind (f1l `Map.union` f2l) (f1r `Map.union` f2r)
                                     return $
                                         Just
                                             ( apply s' $ u' `Set.union` us
-                                            , apply s' $ k' `Map.union` ks
+                                            , apply s' k' `Map.union` ks
                                             , s `composeSubs` s'
                                             )
                             _ -> return Nothing

@@ -91,6 +91,8 @@ compile' (E.Variable x typeInstances)
 -- Constants
 compile' (E.String s) = return $ I.String s
 compile' (E.Literal n) = return $ I.Literal n
+-- List
+compile' (E.List l) = I.List <$> mapM compile' l
 -- Abstraction
 compile' (E.Abstraction x t e) = do
     (indexAssign, typeAssign) <- get

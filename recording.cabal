@@ -1,6 +1,6 @@
 cabal-version:   3.0
 name:            recording
-version:         1.1.0.0
+version:         1.2.0.0
 license-file:    LICENSE
 maintainer:      educorreia932@gmail.com
 author:          Eduardo Correia
@@ -9,77 +9,78 @@ build-type:      Simple
 extra-doc-files: CHANGELOG.md
 
 source-repository head
-    type:     git
-    location: https://github.com/Educorreia932/Recording
+  type:     git
+  location: https://github.com/Educorreia932/Recording
+
+common shared-settings
+  default-language: GHC2021
+  build-depends:
+    , base                ^>=4.18.2.0
+    , containers
+    , lens
+    , megaparsec
+    , mtl
+    , ordered-containers
+    , prettyprinter
+    , split
 
 library
-    exposed-modules:
-        Explicit.Terms
-        Explicit.TypeInference
-        Explicit.Types
-        Explicit.Typing
-        Explicit.Unification
-        Implementation.Compilation
-        Implementation.Evaluator
-        Implementation.Terms
-        Implicit.Parser
-        Implicit.Terms
-        Errors
+  import:          shared-settings
+  exposed-modules:
+    Errors
+    Explicit.Terms
+    Explicit.TypeInference
+    Explicit.Types
+    Explicit.Typing
+    Explicit.Unification
+    Implementation.Compilation
+    Implementation.Evaluation
+    Implementation.Terms
+    Implicit.Parser
+    Implicit.Terms
+    Pretty
 
-    hs-source-dirs:   src
-    default-language: GHC2021
-    build-depends:
-        base ^>=4.18.2.0,
-        containers,
-        lens,
-        megaparsec,
-        mtl,
-        ordered-containers,
-        split
+  hs-source-dirs:  src
 
 executable recording
-    main-is:          Main.hs
-    hs-source-dirs:   src
-    other-modules:
-        Explicit.Terms
-        Explicit.TypeInference
-        Explicit.Types
-        Explicit.Typing
-        Explicit.Unification
-        Implementation.Compilation
-        Implementation.Evaluator
-        Implementation.Terms
-        Implicit.Parser
-        Implicit.Terms
-        Errors
-        Repl
+  import:         shared-settings
+  main-is:        Main.hs
+  hs-source-dirs: src
+  build-depends:
+    repline,
+    text
+  other-modules:
+    Errors
+    Explicit.Terms
+    Explicit.TypeInference
+    Explicit.Types
+    Explicit.Typing
+    Explicit.Unification
+    Implementation.Compilation
+    Implementation.Evaluation
+    Implementation.Terms
+    Implicit.Parser
+    Implicit.Terms
+    Pretty
+    Repl
 
-    default-language: GHC2021
-    ghc-options:      -Wall
-    build-depends:
-        base ^>=4.18.2.0,
-        containers,
-        lens,
-        megaparsec,
-        mtl,
-        ordered-containers,
-        repline,
-        split
+  ghc-options:    -Wall
 
 test-suite recording-test
-    type:             exitcode-stdio-1.0
-    main-is:          Tests.hs
-    hs-source-dirs:   tests
-    other-modules:
-        CompilationTest
-        EvaluatorTest
-        ParserTest
-        TypeInferenceTest
-
-    default-language: GHC2021
-    build-depends:
-        base ^>=4.18.2.0,
-        containers,
-        HUnit ^>=1.6,
-        recording,
-        ordered-containers
+  type:             exitcode-stdio-1.0
+  main-is:          Tests.hs
+  hs-source-dirs:   tests
+  other-modules:
+    CompilationTest
+    EvaluationTest
+    ParserTest
+    TypeInferenceTest
+    UnificationTest
+  default-language: GHC2021
+  build-depends:
+    , base                ^>=4.18.2.0
+    , containers
+    , HUnit               ^>=1.6
+    , ordered-containers
+    , recording
+    , mtl

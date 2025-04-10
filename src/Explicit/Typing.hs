@@ -35,7 +35,7 @@ instance Types T.Type where
     ftv (T.List ts) = ftv ts
     ftv (T.Arrow t1 t2) = ftv t1 `Set.union` ftv t2
     ftv (T.Record m) = ftv m
-    ftv (T.ForAll (l, _) t') = ftv t' Set.\\ Set.singleton l
+    ftv (T.ForAll (l, _) t) = Set.delete l $ ftv t
     ftv (T.Contraction t1 _ t2) = ftv t1 Set.\\ ftv t2
     ftv (T.Extension t1 _ t2) = ftv t1 `Set.union` ftv t2
 
@@ -59,8 +59,8 @@ instance Types T.Type where
             | otherwise = T.ForAll (x, k') $ sub t
           where
             k' = apply substitution k
-        sub (T.Contraction t1 l t2) = T.Contraction (sub t1) l (sub t2)
-        sub (T.Extension t1 l t2) = T.Extension (sub t1) l (sub t2)
+        sub (T.Contraction t1 l t2) = T.rewrite $ T.Contraction (sub t1) l (sub t2)
+        sub (T.Extension t1 l t2) = T.rewrite $ T.Extension (sub t1) l (sub t2)
 
 instance Types T.Kind where
     ftv T.Universal = Set.empty

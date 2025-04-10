@@ -56,9 +56,9 @@ instance Pretty Expression where
                 <+> pretty e
         (bindings, body) = collectLets e2
     pretty (Record m) =
-        encloseSep 
-            (lbrace <> space) 
-            (space <> rbrace) 
+        encloseSep
+            (lbrace <> space)
+            (space <> rbrace)
             (comma <> space)
             (map (\(k, v) -> pretty k <+> equals <+> pretty v) $ Map.toAscList m)
     pretty (Dot e x) = pretty e <> pretty " . " <> pretty x

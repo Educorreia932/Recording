@@ -1,4 +1,4 @@
-module Explicit.TypeInference (typeInference) where
+module Explicit.TypeInference where
 
 import Control.Monad (when)
 import Control.Monad.Except (runExceptT, throwError)
@@ -14,6 +14,16 @@ import Explicit.Typing
 import Explicit.Unification
 import Implicit.Terms
 
+eftv :: (Types a) => KindAssignment -> a -> Set.Set String
+eftv kindAssign t =
+    foldl
+        (\acc x' -> acc `Set.union` ftv (kindAssign Map.! x'))
+        (ftv t)
+        (Set.toList $ ftv t)
+
+eftv' :: KindAssignment -> TypeAssignment -> Set.Set String
+eftv' kindAssign typeAssign = Set.unions $ map (eftv kindAssign) (Map.elems typeAssign)
+
 {- | Create a type scheme out of a type.
 
 __Examples:__
@@ -26,12 +36,9 @@ generalize {x: ([], s1)} (s1 -> s2) == ([s2], s1 -> s2)
 generalize :: KindAssignment -> TypeAssignment -> T.Type -> (KindAssignment, Scheme)
 generalize kindAssign typeAssign t = (kindAssign', Scheme params t')
   where
-    params = Set.toList (eftv t Set.\\ eftv typeAssign)
+    params = Set.toList (eftv kindAssign t Set.\\ eftv' kindAssign typeAssign)
     t' = foldl (\acc v -> T.ForAll (v, kindAssign Map.! v) acc) t (Set.toList $ ftv t)
     kindAssign' = Map.filterWithKey (\k _ -> k `notElem` params) kindAssign
-
-    eftv :: (Types a) => a -> Set.Set String
-    eftv x = foldl (\acc x' -> acc `Set.union` ftv (kindAssign Map.! x')) (ftv x) (Set.toList $ ftv t)
 
 {- | Replaces all bound type variables in a type scheme with fresh type variables.
 

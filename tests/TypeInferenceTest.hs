@@ -4,7 +4,6 @@ import Data.Map qualified as Map
 import Explicit.Terms
 import Explicit.TypeInference
 import Explicit.Types qualified as T
-import Explicit.Typing (Scheme (..))
 import Implicit.Parser (parseExpression)
 import Test.HUnit
 
@@ -45,11 +44,11 @@ testEvaluate =
         , TestCase $
             assertEqual
                 "Let expression"
-                ( let t = T.ForAll ("t0", T.Universal) (T.Parameter "t0" `T.Arrow` T.Parameter "t0")
+                ( let t = T.ForAll ("t1", T.Universal) (T.Parameter "t1" `T.Arrow` T.Parameter "t1")
                    in Let
                         "id"
                         t
-                        (Poly (Abstraction "x" (T.Parameter "t0") (Variable "x" [])) t)
+                        (Poly (Abstraction "x" (T.Parameter "t1") (Variable "x" [])) t)
                         (Application (Variable "id" [T.Int]) (Literal 42))
                 , T.Int
                 )
